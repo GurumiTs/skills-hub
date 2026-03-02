@@ -1,0 +1,47 @@
+{
+  "service_name": "portal",
+  "type": "web",
+  "stack": [".NET 8", "IIS", "MsSQL"],
+  "environments": ["DEV", "UAT", "PROD"],
+  "build": {
+    "repo": "git@github.com:org/portal.git",
+    "steps": [
+      "dotnet restore",
+      "dotnet publish -c Release"
+    ]
+  },
+  "config": {
+    "secrets": ["DB_CONN", "SMTP_PASS"],
+    "appsettings": ["ASPNETCORE_ENVIRONMENT", "Logging"]
+  },
+  "database": {
+    "migrations": "SQL scripts",
+    "notes": "Run migration scripts before switching traffic"
+  },
+  "deploy": {
+    "strategy": "blue-green",
+    "steps": [
+      "Backup current config",
+      "Deploy new build to green slot",
+      "Warm up / health check",
+      "Switch traffic",
+      "Monitor error rate"
+    ]
+  },
+  "rollback": {
+    "steps": [
+      "Switch traffic back to blue slot",
+      "Rollback DB scripts if needed",
+      "Invalidate caches"
+    ]
+  },
+  "observability": {
+    "health_endpoint": ["/health"],
+    "logs": ["IIS logs", "application logs"],
+    "metrics": ["request latency", "error rate"]
+  },
+  "support": {
+    "oncall": "IT Team",
+    "contacts": ["daniel@company"]
+  }
+}

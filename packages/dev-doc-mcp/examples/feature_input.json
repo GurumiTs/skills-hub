@@ -1,0 +1,83 @@
+{
+  "id": "FEAT-001",
+  "title": "Password reset via email",
+  "background": "Users frequently forget passwords, which creates support tickets. Provide a self-serve reset flow.",
+  "goals": [
+    "Allow users to reset password without contacting support",
+    "Reduce password-related support tickets"
+  ],
+  "non_goals": [
+    "SMS verification",
+    "Full MFA integration"
+  ],
+  "stakeholders": {
+    "requester": "Customer Support",
+    "owner": "Engineering"
+  },
+  "users": [
+    {
+      "role": "end_user",
+      "pain_points": ["forgot password", "slow support response"]
+    }
+  ],
+  "scope": {
+    "in": [
+      "Request password reset link",
+      "Reset password using one-time token",
+      "Audit logging for reset events"
+    ],
+    "out": [
+      "SMS/phone verification",
+      "Account recovery for deleted accounts"
+    ]
+  },
+  "user_stories": [
+    {
+      "as": "end_user",
+      "want": "request a reset link",
+      "so_that": "I can regain access"
+    },
+    {
+      "as": "end_user",
+      "want": "set a new password with a valid token",
+      "so_that": "my account is secure"
+    }
+  ],
+  "acceptance_criteria": [
+    "Entering an email always shows a generic success message (avoid account enumeration)",
+    "Reset token expires in 15 minutes and can be used only once",
+    "Rate limiting is applied to reset requests"
+  ],
+  "non_functional": {
+    "security": [
+      "Rate limit reset requests",
+      "Store token hashes (never store raw tokens)",
+      "Audit log with userId + request IP"
+    ],
+    "performance": [
+      "P95 latency < 300ms for request endpoint"
+    ]
+  },
+  "integrations": [
+    {
+      "name": "Email provider",
+      "notes": "SMTP or SendGrid"
+    }
+  ],
+  "data_entities": [
+    {
+      "name": "PasswordResetToken",
+      "fields": [
+        "user_id",
+        "token_hash",
+        "expires_at",
+        "used_at",
+        "created_at"
+      ]
+    }
+  ],
+  "open_questions": [
+    "Should we localize email templates?",
+    "Should we also invalidate active sessions after reset?"
+  ]
+}

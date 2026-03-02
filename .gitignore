@@ -1,10 +1,90 @@
+############################################
+# Dependencies
+############################################
 node_modules/
+
+############################################
+# Environment / Secrets
+############################################
 .env
+.env.*
+!.env.example
+!.env.template
+
+# Gemini project secrets
 .gemini/.env
-.DS_Store
+.gemini/.env.*
+!.gemini/.env.example
 
-# logs
+############################################
+# Logs
+############################################
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# build artifacts (if you add TS later)
+############################################
+# Build artifacts
+############################################
 dist/
+build/
+out/
+*.tsbuildinfo
+
+############################################
+# Test / coverage
+############################################
+coverage/
+.nyc_output/
+junit.xml
+
+############################################
+# Caches
+############################################
+.eslintcache
+.stylelintcache
+.cache/
+.turbo/
+.parcel-cache/
+.vite/
+.next/
+.svelte-kit/
+
+############################################
+# OS files
+############################################
+.DS_Store
+Thumbs.db
+
+############################################
+# IDE / Editor
+############################################
+.idea/
+*.iml
+.vscode/
+
+############################################
+# Gemini generated docs (避免規格文件進入 Git Changes)
+# 依你現在 dev-doc-mcp 的預設 output_dir 設計
+############################################
+docs/requirements/
+docs/runbooks/
+docs/deploy/
+docs/db/
+docs/specs/
+docs/_generated/
+docs/flowchart/
+
+############################################
+# Gemini: ignore nested .gemini folders in subpackages (optional but practical)
+############################################
+**/.gemini/
+!/.gemini/
+!.gemini/settings.json
+!.gemini/skills/
+!.gemini/skills/**
+!.gemini/commands/
+!.gemini/commands/**
+!.gemini/GEMINI.md

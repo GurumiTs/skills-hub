@@ -1,0 +1,17 @@
+{
+  "name": "flowchart-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A Gemini CLI MCP to generate flowcharts from text prompts.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Gemini CLI",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  }
+}

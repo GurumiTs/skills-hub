@@ -10,6 +10,7 @@
     "bootstrap": "npm install",
     "dev:redmine": "node --env-file=.env packages/redmine-mcp/index.js",
     "dev:file": "node packages/file-mcp/index.js",
+    "dev:devdocs": "node packages/dev-doc-mcp/index.js",
     "lint": "node -e \"console.log('Add ESLint later if you want')\""
   }
 }

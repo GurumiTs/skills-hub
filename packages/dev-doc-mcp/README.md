@@ -1,13 +1,45 @@
-# MCP Skill Template
+# dev-doc-mcp
 
-Copy this folder to `packages/<your-skill>` and edit:
+A practical MCP server for day-to-day software/web development documentation:
 
-- `package.json` (name/bin)
-- `index.js` (tools)
+- Requirements docs (stakeholder + developer versions)
+- Runbook + Deploy guide
+- MsSQL schema documentation (dictionary + Mermaid ER + JSON snapshot)
 
-Then run:
+## Install
+From repo root:
 
 ```bash
 npm install
-node packages/<your-skill>/index.js
 ```
+
+## Run locally
+
+```bash
+node packages/dev-doc-mcp/index.js
+```
+
+## Configure Gemini CLI
+Add a server in `.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "devDocs": {
+      "command": "node",
+      "args": ["./packages/dev-doc-mcp/index.js"],
+      "cwd": ".",
+      "env": {
+        "MSSQL_CONN": "$MSSQL_CONN"
+      },
+      "trust": false
+    }
+  }
+}
+```
+
+## Examples
+See:
+- `packages/dev-doc-mcp/examples/feature_input.json`
+- `packages/dev-doc-mcp/examples/runbook_input.json`
+- `packages/dev-doc-mcp/examples/dbdoc_input.json`

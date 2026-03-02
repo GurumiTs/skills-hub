@@ -1,13 +1,14 @@
 {
-  "name": "@skills-hub/your-skill-mcp",
-  "version": "1.0.0",
+  "name": "@skills-hub/dev-doc-mcp",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "bin": {
-    "your-skill-mcp": "./index.js"
+    "dev-doc-mcp": "./index.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "mssql": "^11.0.1",
     "zod": "^3.23.0"
   }
 }

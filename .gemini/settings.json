@@ -19,6 +19,22 @@
       "args": ["./packages/file-mcp/index.js"],
       "cwd": ".",
       "trust": false
+    },
+    "devDocs": {
+      "command": "node",
+      "args": ["./packages/dev-doc-mcp/index.js"],
+      "cwd": ".",
+      "env": {
+        "MSSQL_CONN": "$MSSQL_CONN"
+      },
+      "trust": false
+    },
+    "flowchart":{
+      "alias": "flowchart",
+      "command": "node",
+      "args": ["./packages/flowchart-mcp/index.js"],
+      "cwd": ".",
+      "tool_prefix": "flowchart"
     }
   },
   "security": {
