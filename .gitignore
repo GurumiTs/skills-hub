@@ -1,0 +1,10 @@
+node_modules/
+.env
+.gemini/.env
+.DS_Store
+
+# logs
+*.log
+
+# build artifacts (if you add TS later)
+dist/

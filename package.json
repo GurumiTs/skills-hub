@@ -1,0 +1,15 @@
+{
+  "name": "skills-hub",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "bootstrap": "npm install",
+    "dev:redmine": "node --env-file=.env packages/redmine-mcp/index.js",
+    "dev:file": "node packages/file-mcp/index.js",
+    "lint": "node -e \"console.log('Add ESLint later if you want')\""
+  }
+}

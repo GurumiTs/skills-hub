@@ -1,0 +1,28 @@
+{
+  "general":{
+    "defaultApprovalMode": "default",
+    "checkpointing": { "enabled": true }
+  },
+  "mcpServers": {
+    "redmine": {
+      "command": "node",
+      "args": ["./packages/redmine-mcp/index.js"],
+      "cwd": ".",
+      "env": {
+        "REDMINE_URL": "$REDMINE_URL",
+        "REDMINE_API_KEY": "$REDMINE_API_KEY"
+      },
+      "trust": true
+    },
+    "localFiles": {
+      "command": "node",
+      "args": ["./packages/file-mcp/index.js"],
+      "cwd": ".",
+      "trust": false
+    }
+  },
+  "security": {
+    "enablePermanentToolApproval": false,
+    "disableYoloMode": true
+  }
+}

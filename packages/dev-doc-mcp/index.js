@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+
+const server = new McpServer({
+  name: "Your-Skill",
+  version: "1.0.0",
+});
+
+server.tool(
+  "hello",
+  { name: z.string().default("Daniel").describe("Your name") },
+  async ({ name }) => ({
+    content: [{ type: "text", text: `Hello ${name}!` }],
+  })
+);
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+console.error("Your MCP server running...");
