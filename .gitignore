@@ -63,8 +63,26 @@ Thumbs.db
 ############################################
 .idea/
 *.iml
-.vscode/
 
+# Visual Studio / .NET local files
+.vscode/
+.vs/
+bin/
+obj/
+*.user
+*.csproj.user
+*.vbproj.user
+*.suo
+*.rsuser
+*.userosscache
+*.sln.docstates
+
+# Local database / temp files
+*.db
+*.sqlite
+*.sqlite3
+*.bak
+*.tmp
 ############################################
 # Gemini generated docs (避免規格文件進入 Git Changes)
 # 依你現在 dev-doc-mcp 的預設 output_dir 設計
