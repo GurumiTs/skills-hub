@@ -59,12 +59,15 @@ server.tool(
       
       const finalHtml = htmlTemplate.replace('{{MERMAID_SYNTAX}}', mermaidSyntax);
 
+      const suggestedPath = path.join('docs', 'flowchart', 'flowchart-preview.html').replace(/\\/g, '/');
+
       return {
         content: [{ type: "text", text: JSON.stringify({
           tool_name: 'generate_html',
           status: 'success',
           result: {
-            html_content: finalHtml
+            html_content: finalHtml,
+            suggested_path: suggestedPath
           }
         }) }],
       };

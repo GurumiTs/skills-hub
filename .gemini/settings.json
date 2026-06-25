@@ -39,6 +39,6 @@
   },
   "security": {
     "enablePermanentToolApproval": false,
-    "disableYoloMode": true
+    "disableYoloMode": false
   }
 }
