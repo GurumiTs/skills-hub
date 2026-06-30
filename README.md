@@ -1,19 +1,16 @@
 # skills-hub - Gemini CLI Skills & MCP Hub
 
-`skills-hub` 是一個給 Gemini CLI 使用的開發輔助能力中心，用來集中管理日常開發、系統分析、文件整理與內部工具整合所需的 Skills、MCP Server 與共通工作規範。
+`skills-hub` 是一個給 Gemini CLI 使用的開發輔助能力中心，用來集中管理日常開發、系統分析、文件整理與內部工具整合所需的 Workspace Skills、MCP Server、Agents、Commands 與共通工作規範。
 
 這個 repository 本身不是業務系統專案，而是讓開發者在啟動 Gemini CLI 後，可以更穩定地把 Gemini 當成「開發顧問與工作助理」使用。
 
-主要分成兩個部分：
-
-* `packages/`：放 MCP Server，提供 Gemini CLI 可以呼叫的工具能力。
-* `skills/`：放 Gemini Skills，定義 Gemini 在不同工作情境下應該如何協助使用者。
-
 簡單來說：
 
-* `packages/` 解決「Gemini 可以做什麼」
-* `skills/` 解決「Gemini 應該怎麼做」
-* `GEMINI.md` 解決「Gemini 在本 workspace 中必須遵守哪些共通規則」
+* `packages/` 解決「Gemini 可以做什麼」：MCP Server 工具能力。
+* `.gemini/skills/` 解決「Gemini 可以套用哪些專業能力」：Workspace Skills。
+* `.gemini/agents/` 解決「Gemini 可以切換哪些工作角色」：Agents。
+* `.gemini/commands/` 解決「Gemini 可以執行哪些可重複流程」：Workflow commands。
+* `GEMINI.md` 解決「Gemini 在本 workspace 中必須遵守哪些共通規則」。
 
 ---
 
@@ -53,21 +50,24 @@
 3. 啟動 Gemini CLI。
 4. 透過目前工作目錄或 `/directory add` 加入目標專案。
 5. 讓 Gemini 協助分析、開發、重構、撰寫文件或排查問題。
-6. 視需要擴充新的 Skill 或 MCP Server。
+6. 視需要擴充新的 Workspace Skill、Agent、Command 或 MCP Server。
 
 ---
 
 ## 專案結構
 
-| 路徑                 | 說明                                                         |
-| ------------------ | ---------------------------------------------------------- |
-| `packages/`        | MCP Server 程式碼，每個 package 代表一個可被 Gemini CLI 呼叫的工具服務        |
-| `skills/`          | Gemini Skills，定義顧問角色、工作流、文件格式與操作規範                         |
-| `.gemini/`         | Gemini CLI 專案設定，例如 `settings.json`、`.env.example`、commands |
-| `docs/`            | 專案文件與文件產出位置                                                |
-| `docs/_generated/` | Gemini 對話產生的文件輸出目錄，預設不進 Git                                |
-| `GEMINI.md`        | Gemini CLI 進入專案後讀取的專案層規則                                   |
-| `README.md`        | 給 GitHub 使用者與開發者看的專案說明                                     |
+| 路徑 | 說明 |
+|---|---|
+| `packages/` | MCP Server 程式碼，每個 package 代表一個可被 Gemini CLI 呼叫的工具服務 |
+| `.gemini/` | Gemini CLI 專案設定，例如 `settings.json`、`.env.example`、Workspace Skills、Agents、Commands |
+| `.gemini/skills/` | Gemini CLI 會 discovery 的正式 Workspace Skills |
+| `.gemini/agents/` | Agent 角色定義與多 Agent 協作規則，後續擴充用 |
+| `.gemini/commands/` | Gemini CLI workflow / command 定義，後續擴充用 |
+| `skills/_template/` | 給開發者複製用的 Skill 模板，不是正式 Skill，不應被 Gemini CLI discovery |
+| `docs/` | 專案文件與文件產出位置 |
+| `docs/_generated/` | Gemini 對話產生的文件輸出目錄，預設不進 Git |
+| `GEMINI.md` | Gemini CLI 進入專案後讀取的專案層共通規則 |
+| `README.md` | 給 GitHub 使用者與開發者看的專案說明 |
 
 ---
 
@@ -75,15 +75,14 @@
 
 ### MCP Servers
 
-MCP Server 用來提供 Gemini CLI 可呼叫的工具能力。
-MCP Server 的實際註冊設定集中在 `.gemini/settings.json`。
+MCP Server 用來提供 Gemini CLI 可呼叫的工具能力。MCP Server 的實際註冊設定集中在 `.gemini/settings.json`。
 
-| MCP Server    | 路徑                       | 狀態  | 用途                            |
-| ------------- | ------------------------ | --- | ----------------------------- |
-| Redmine MCP   | `packages/redmine-mcp`   | 已建立 | 查詢 Redmine 議題                 |
-| File MCP      | `packages/file-mcp`      | 已建立 | 本機檔案與資料夾操作                    |
-| Dev Docs MCP  | `packages/dev-doc-mcp`   | 已建立 | 產生需求文件、Runbook、DB Schema 文件內容 |
-| Flowchart MCP | `packages/flowchart-mcp` | 已建立 | 產生流程圖或 Mermaid 內容             |
+| MCP Server | 路徑 | 狀態 | 用途 |
+|---|---|---|---|
+| Redmine MCP | `packages/redmine-mcp` | 已建立 | 查詢 Redmine 議題 |
+| File MCP | `packages/file-mcp` | 已建立 | 本機檔案與資料夾操作 |
+| Dev Docs MCP | `packages/dev-doc-mcp` | 已建立 | 產生需求文件、Runbook、DB Schema 文件內容 |
+| Flowchart MCP | `packages/flowchart-mcp` | 已建立 | 產生流程圖或 Mermaid 內容 |
 
 進入 Gemini CLI 後，可以使用以下指令確認目前已載入的 MCP Server 與 tools：
 
@@ -97,37 +96,55 @@ MCP Server 的實際註冊設定集中在 `.gemini/settings.json`。
 /mcp reload
 ```
 
-### Gemini Skills
+### Workspace Skills
 
-Gemini Skill 用來定義 Gemini 在特定工作情境下的角色、工作流、輸出格式與限制。
+Workspace Skill 用來定義 Gemini 在特定工作情境下可套用的專業能力、工作流程、輸出格式與限制。
 
-| Skill         | 路徑                              | 狀態  | 用途              |
-| ------------- | ------------------------------- | --- | --------------- |
-| Dev Docs      | `skills/dev-docs/SKILL.md`      | 已啟用 | 常用文件工作流         |
-| SA Consultant | `skills/sa-consultant/SKILL.md` | 已啟用 | SA 顧問與技術規格文件工作流 |
-
-正式啟用的 Skill 會列在：
+正式 Workspace Skills 應放在：
 
 ```text
-skills/_index.md
+.gemini/skills/<skill-name>/SKILL.md
 ```
 
-`skills/_template/` 只作為開發者建立新 Skill 時的範例模板，不應被加入 `_index.md`。
+目前已建立：
 
-修改 `GEMINI.md`、`skills/_index.md` 或正式 Skill 後，請在 Gemini CLI 中執行：
+| Skill | 路徑 | 狀態 | 用途 |
+|---|---|---|---|
+| SA Consultant | `.gemini/skills/sa-consultant/SKILL.md` | 已建立 | SA 顧問、需求分析、技術規格、系統影響分析與回滾規劃 |
+
+修改或新增 Workspace Skill 後，請在 Gemini CLI 中執行：
 
 ```text
-/memory refresh
-/memory show
+/skills reload
+/skills list
 ```
 
-確認最新規則與 Skill 已被載入。
+確認新的 Skill 是否已被 Gemini CLI discovery。
+
+> 注意：`skills/_template/` 只作為開發者建立新 Skill 時的範例模板，不是正式 Workspace Skill。
+
+### Agents
+
+Agent 用來定義 SDLC 中的工作角色，例如 SA、Developer、Tester、Code Reviewer、Security Reviewer、Release Engineer。
+
+目前本 repository 尚未建立正式 Agent。後續若要啟用多 Agent 協作，建議放在：
+
+```text
+.gemini/agents/
+```
+
+新增或修改 Agent 後，請在 Gemini CLI 中執行：
+
+```text
+/agents reload
+/agents list
+```
 
 ---
 
 ## 快速開始
 
-以下步驟適合第一次 clone 本 repository 的開發者，用來完成安裝、環境變數設定、Gemini CLI 啟動、MCP Server 驗證，以及 `GEMINI.md` / Skills 載入確認。
+以下步驟適合第一次 clone 本 repository 的開發者，用來完成安裝、環境變數設定、Gemini CLI 啟動、MCP Server 驗證，以及 `GEMINI.md` / Workspace Skills 載入確認。
 
 ### 1. Clone repository
 
@@ -146,8 +163,6 @@ npm install
 
 本專案建議將 Gemini CLI 與 MCP Server 需要的環境變數集中放在 `.gemini/.env`。
 
-請先複製環境變數範例檔：
-
 Linux / macOS：
 
 ```bash
@@ -160,21 +175,17 @@ Windows PowerShell：
 Copy-Item .gemini/.env.example .gemini/.env
 ```
 
-接著依照實際需要修改 `.gemini/.env`。
-
 常見需要設定的變數包含：
 
-| 變數                | 用途                                 |
-| ----------------- | ---------------------------------- |
-| `GEMINI_API_KEY`  | Gemini CLI API Key，建議由系統環境變數提供     |
-| `REDMINE_URL`     | Redmine 網址                         |
-| `REDMINE_API_KEY` | Redmine API Key                    |
-| `FILE_MCP_ROOTS`  | file-mcp 允許讀寫的根目錄                  |
-| `MSSQL_CONN`      | dev-doc-mcp 查詢 DB metadata 使用的連線字串 |
+| 變數 | 用途 |
+|---|---|
+| `GEMINI_API_KEY` | Gemini CLI API Key，建議由系統環境變數提供 |
+| `REDMINE_URL` | Redmine 網址 |
+| `REDMINE_API_KEY` | Redmine API Key |
+| `FILE_MCP_ROOTS` | file-mcp 允許讀寫的根目錄 |
+| `MSSQL_CONN` | dev-doc-mcp 查詢 DB metadata 使用的連線字串 |
 
 請不要將真實 API Key、Password、Token、Cookie 或 Connection String commit 到 GitHub。
-
-如果只想先測試 Gemini CLI 與本 repository 的 Skill / memory 載入，可以先保留部分 MCP 相關變數空白；但若要使用 Redmine、file-mcp 或 DB metadata 相關工具，則需要補齊對應變數。
 
 ### 4. 檢查 Gemini CLI 專案設定
 
@@ -185,17 +196,6 @@ Gemini CLI 的專案設定放在：
 ```
 
 此檔案主要用來註冊 MCP Server runtime 設定。
-
-請確認 `.gemini/settings.json` 中的 MCP Server 路徑與目前 repository 結構一致，例如：
-
-```text
-packages/redmine-mcp
-packages/file-mcp
-packages/dev-doc-mcp
-packages/flowchart-mcp
-```
-
-如果你新增、移除或調整 MCP Server，後續也需要同步更新 `.gemini/settings.json`。
 
 ### 5. 測試 MCP Server 是否能單獨啟動
 
@@ -258,8 +258,6 @@ gemini
 /permissions trust
 ```
 
-若 workspace 未被信任，Gemini CLI 可能不會載入本 repository 的 workspace 設定、`.env`、MCP Server 或 memory context。
-
 ### 8. 確認 MCP Server 是否載入
 
 進入 Gemini CLI 後執行：
@@ -268,63 +266,41 @@ gemini
 /mcp
 ```
 
-確認 `.gemini/settings.json` 中設定的 MCP Server 是否已成功載入。
-
-若你的 Gemini CLI 版本支援 MCP reload，也可以在調整 MCP 設定後執行：
+若有調整 MCP 設定，可執行：
 
 ```text
 /mcp reload
 ```
 
-如果 MCP Server 沒有出現，請檢查：
+### 9. 確認 Workspace Skills 是否載入
 
-* `.gemini/settings.json` 的 `mcpServers` 設定是否正確
-* MCP Server 的 package 路徑是否正確
-* 對應的環境變數是否已設定
-* MCP Server 是否能用 `npm run dev:<name>` 單獨啟動
-* 目前 workspace 是否已被 trust
-
-### 9. 確認 GEMINI.md 與 Skills 是否載入
-
-本 repository 的 Gemini CLI 共通規則定義在：
+正式 Workspace Skills 放在：
 
 ```text
-GEMINI.md
+.gemini/skills/
 ```
 
-正式啟用的 Skill import 清單定義在：
+進入 Gemini CLI 後執行：
 
 ```text
-skills/_index.md
+/skills reload
+/skills list
 ```
 
-修改 `GEMINI.md`、`skills/_index.md` 或任何正式 Skill 後，請在 Gemini CLI 中重新載入 memory：
+確認 `sa-consultant` 是否出現在 skills 清單中。
 
-```text
-/memory reload
-/memory show
-```
+### 10. 確認 GEMINI.md 是否載入
 
-如果你的 Gemini CLI 版本仍使用舊版指令，請依實際版本改用：
+修改 `GEMINI.md` 後，請在 Gemini CLI 中執行：
 
 ```text
 /memory refresh
 /memory show
 ```
 
-確認目前載入的 context 應包含：
+確認 Gemini CLI 是否已載入最新共通規則。
 
-* `GEMINI.md`
-* `skills/_index.md`
-* `skills/_index.md` 中實際 import 的正式 Skill 文件
-
-確認目前載入的 context 不應包含：
-
-* `skills/_template/SKILL.md`
-
-如果 `skills/_template/SKILL.md` 出現在 memory 中，代表設定可能有誤，請檢查 `skills/_index.md` 是否不小心引用了模板。
-
-### 10. 開始使用
+### 11. 開始使用
 
 啟動完成後，可以直接在 Gemini CLI 中提出開發輔助需求，例如：
 
@@ -352,101 +328,108 @@ skills/_index.md
 請把這段流程整理成 Mermaid flowchart。
 ```
 
-若要讓 Gemini 協助其他專案，請在 Gemini CLI 中切換到目標專案目錄，或使用 Gemini CLI 支援的多目錄 / 工作目錄方式，讓 Gemini 以該目標專案作為主要分析與開發對象。
-
-### 11. 常見檢查指令
-
-Gemini CLI 內常用指令：
-
-```text
-/mcp
-/mcp reload
-/memory reload
-/memory show
-/permissions trust
-```
-
-本 repository 常用 npm 指令：
-
-```bash
-npm install
-npm run dev:redmine
-npm run dev:file
-npm run dev:devdocs
-```
-
-如果有新增其他 MCP Server，請同步確認 root `package.json` 是否已加入對應的 `npm run dev:<name>` script。
+若要讓 Gemini 協助其他專案，請在 Gemini CLI 中切換到目標專案目錄，或使用 `/directory add <path>` 將目標專案加入 workspace。
 
 ---
 
-## 新增 Gemini Skill
+## 新增 Workspace Skill
 
-Gemini Skill 放在 `skills/` 底下，用來定義 Gemini 在特定任務中的工作方式。
+Gemini CLI 會 discovery 的正式 Workspace Skill 應放在：
 
-Skill 應優先描述「什麼情境下該怎麼協助使用者」，而不是把所有工具操作細節都寫進 Skill。
-若某個 Skill 明確需要搭配 MCP Server，才需要在 Skill 中描述可搭配的工具。
+```text
+.gemini/skills/<skill-name>/SKILL.md
+```
 
 ### 1. 複製模板
 
 Linux / macOS：
 
 ```bash
-cp -r skills/_template skills/<new-skill>
+mkdir -p .gemini/skills/<new-skill>
+cp skills/_template/SKILL.md .gemini/skills/<new-skill>/SKILL.md
 ```
 
 Windows PowerShell：
 
 ```powershell
-Copy-Item -Recurse skills/_template skills/<new-skill>
+New-Item -ItemType Directory -Force -Path ".gemini\skills\<new-skill>"
+Copy-Item skills\_template\SKILL.md .gemini\skills\<new-skill>\SKILL.md
 ```
 
-### 2. 修改 Skill 內容
+### 2. 修改 Skill frontmatter
 
-修改新建立的檔案：
+`SKILL.md` 第一行必須是 YAML frontmatter，並至少包含：
 
-```text
-skills/<new-skill>/SKILL.md
+```md
+---
+name: <new-skill>
+description: Use when ...
+---
 ```
+
+`description` 是 Gemini CLI 判斷是否要啟用 Skill 的重要依據，請避免寫得過度寬泛。
+
+### 3. 修改 Skill 內容
+
+Skill 應定義「能力、使用時機、工作流程、輸出格式與限制」，不應取代 Agent 的主要身份。
 
 建議至少包含：
 
+* 能力定位
+* 能力範圍
+* 使用邊界
 * Skill 目的
 * 使用時機
 * 不使用時機
+* 可搭配的工具能力
 * 預期輸入與輸出
 * 工作流程
-* 輸出格式
 * 檔案輸出規則
 * 安全限制
-* 可搭配的 MCP 工具，可選，僅在該 Skill 明確需要工具能力時撰寫
+* 輸出格式
 * 範例 Prompt
 
-### 3. 啟用 Skill
-
-在 `skills/_index.md` 中加入 import，例如：
-
-```md
-@./<new-skill>/SKILL.md
-```
-
-只有被 `skills/_index.md` import 的 Skill，才會被 Gemini CLI 載入。
-
-請不要把以下模板檔案加入 `skills/_index.md`：
-
-```text
-skills/_template/SKILL.md
-```
-
-### 4. 重新載入 Gemini memory
+### 4. 重新載入 Skills
 
 進入 Gemini CLI 後執行：
 
 ```text
-/memory refresh
-/memory show
+/skills reload
+/skills list
 ```
 
-確認新的 Skill 內容已被載入。
+確認新的 Skill 是否已被 discovery。
+
+> 注意：不要再透過 `skills/_index.md` 註冊 Skill。`skills/_index.md` 已不作為 Gemini CLI 的 Skill registry。
+
+---
+
+## 新增 Agent
+
+Agent 用來定義工作角色，例如 SA、Developer、Tester、Code Reviewer、Security Reviewer、Release Engineer。
+
+建議放在：
+
+```text
+.gemini/agents/
+```
+
+Agent 應定義：
+
+* 角色定位
+* 責任範圍
+* 不負責事項
+* 可使用的工具或 MCP Server 範圍
+* 何時需要 handoff 給其他 Agent
+* 何時需要回報使用者確認
+* 是否允許提出檔案變更提案
+
+新增或修改 Agent 後，進入 Gemini CLI 執行：
+
+```text
+/agents reload
+/agents list
+```
 
 ---
 
@@ -501,19 +484,8 @@ packages/<new-name>-mcp
 在 `mcpServers` 底下加入新的 server 設定。
 
 請避免將真實 API Key、Token、Password、Connection String 或其他機密資訊直接寫入 `.gemini/settings.json`。
-需要機密值時，應透過環境變數或 secret store 提供。
 
-### 5. 更新環境變數範例
-
-如果新的 MCP Server 需要環境變數，請同步更新：
-
-```text
-.gemini/.env.example
-```
-
-範例值只能使用 placeholder，不可填入真實機密。
-
-### 6. 驗證 MCP Server
+### 5. 驗證 MCP Server
 
 可先用 npm script 單獨啟動：
 
@@ -533,14 +505,6 @@ npx @modelcontextprotocol/inspector -- node ./packages/<new-name>-mcp/index.js
 /mcp
 ```
 
-確認新的 MCP Server 是否已載入。
-
-若有調整 MCP 設定，可執行：
-
-```text
-/mcp reload
-```
-
 ---
 
 ## 文件產出規則
@@ -557,13 +521,14 @@ docs/_generated/
 
 常見目錄：
 
-| 類型      | 建議輸出位置                          |
-| ------- | ------------------------------- |
-| SA 技術規格 | `docs/_generated/sa-specs/`     |
-| 一般開發文件  | `docs/_generated/dev-docs/`     |
-| DB 文件   | `docs/_generated/db/`           |
-| 需求文件    | `docs/_generated/requirements/` |
-| 流程圖文件   | `docs/_generated/flowchart/`    |
+| 類型 | 建議輸出位置 |
+|---|---|
+| SA 技術規格 | `docs/_generated/sa-specs/` |
+| 一般開發文件 | `docs/_generated/dev-docs/` |
+| DB 文件 | `docs/_generated/db/` |
+| 需求文件 | `docs/_generated/requirements/` |
+| 流程圖文件 | `docs/_generated/flowchart/` |
+| Workflow handoff | `docs/_generated/workflows/` |
 
 如果某份文件未來要成為正式文件，建議先人工檢查內容，再移到正式文件目錄並 commit。
 
@@ -590,8 +555,6 @@ docs/_generated/
 * 修改摘要
 * 驗證方式
 * 回滾方式
-
-此規則主要是為了避免 Gemini 在未確認的情況下直接修改專案檔案、設定或外部系統資料。
 
 ---
 
@@ -621,14 +584,23 @@ npm install
 npm run dev:redmine
 npm run dev:file
 npm run dev:devdocs
+```
+
+若有建立 Flowchart MCP 啟動 script：
+
+```bash
 npm run dev:flowchart
 ```
 
-### Gemini cli
+### Gemini CLI
 
-```bash
+```text
 /mcp
 /mcp reload
+/skills reload
+/skills list
+/agents reload
+/agents list
 /memory refresh
 /memory show
 /permissions trust
@@ -637,6 +609,7 @@ npm run dev:flowchart
 ```
 
 ### MCP Inspector
+
 ```bash
 npx @modelcontextprotocol/inspector -- node ./packages/dev-doc-mcp/index.js
 ```
@@ -649,7 +622,7 @@ npx @modelcontextprotocol/inspector -- node ./packages/dev-doc-mcp/index.js
 * `.gemini/settings.json`：MCP Server runtime 註冊設定
 * `.gemini/.env.example`：環境變數範例，不包含真實機密
 * `GEMINI.md`：Gemini CLI 專案層共通規則
-* `skills/_index.md`：正式啟用的 Skill import 清單
+* `.gemini/skills/`：正式 Workspace Skills
 * `skills/_template/`：建立新 Skill 時可複製的模板
 
 ---
@@ -666,23 +639,39 @@ npx @modelcontextprotocol/inspector -- node ./packages/dev-doc-mcp/index.js
 * Git 操作輔助 MCP
 * 部署檢查 MCP
 * Log 分析 MCP
+* Test Runner MCP
+* Static Analysis MCP
 
-### Gemini Skills
+### Workspace Skills
 
-* 更多文件型 Skill
-* 更完整的 SA / 架構設計 Skill
+* Developer Implementer Skill
 * Code Review Skill
-* Legacy System Maintenance Skill
-* Incident / RCA 分析 Skill
+* Test Engineer Skill
+* Security Review Skill
+* Release / Ops Skill
+* Incident / RCA Skill
 * SQL / DB Review Skill
+* Legacy System Maintenance Skill
+
+### Agents
+
+* Workflow Orchestrator Agent
+* SA Consultant Agent
+* Developer Agent
+* Test Engineer Agent
+* Code Reviewer Agent
+* Security Reviewer Agent
+* Release Engineer Agent
+* Incident Engineer Agent
 
 ### 文件與維護流程
 
 * 自動化文件輸出流程
 * 專案初始化腳本
 * Skill 建立檢查清單
+* Agent 建立檢查清單
 * MCP Server 建立檢查清單
-* README / GEMINI.md / skills/_index.md 一致性檢查
+* README / GEMINI.md / `.gemini/skills` 一致性檢查
 
 ---
 
