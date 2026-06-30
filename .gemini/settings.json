@@ -1,5 +1,5 @@
 {
-  "general":{
+  "general": {
     "defaultApprovalMode": "default",
     "checkpointing": { "enabled": true }
   },
@@ -29,12 +29,11 @@
       },
       "trust": false
     },
-    "flowchart":{
-      "alias": "flowchart",
+    "flowchart": {
       "command": "node",
       "args": ["./packages/flowchart-mcp/index.js"],
       "cwd": ".",
-      "tool_prefix": "flowchart"
+      "trust": false
     }
   },
   "security": {
