@@ -1,44 +1,709 @@
-# skills-hub (MCP Skills Collection)
+# skills-hub - Gemini CLI Skills & MCP Hub
 
-這是一個「技能集合專案」(skills hub)：
-- 用 **monorepo/workspaces** 管理多個 MCP Server（每個 server = 一個 skill/package）
-- 方便你後續新增/拆分工具、共用套件、版本控管
-- 在 `.gemini/settings.json` 內註冊各個 MCP server，讓 Gemini CLI 可以呼叫工具
+`skills-hub` 是一個給 Gemini CLI 使用的開發輔助能力中心，用來集中管理日常開發、系統分析、文件整理與內部工具整合所需的 Skills、MCP Server 與共通工作規範。
 
-> 首次進 Gemini CLI 後請用 `/permissions` 把 skills-hub 設為 Trusted（或依你的安全策略維持 `trust=false`）。
+這個 repository 本身不是業務系統專案，而是讓開發者在啟動 Gemini CLI 後，可以更穩定地把 Gemini 當成「開發顧問與工作助理」使用。
 
-## 目前內建 skills
-- `packages/redmine-mcp`：Redmine 工具（列出議題、讀取議題）
-- `packages/file-mcp`：本機檔案/資料夾工具（list/read/write 等）
-- `packages/dev-doc-mcp`：文件產生工具（需求文件/Runbook/Deploy guide/MsSQL schema docs）
+主要分成兩個部分：
+
+* `packages/`：放 MCP Server，提供 Gemini CLI 可以呼叫的工具能力。
+* `skills/`：放 Gemini Skills，定義 Gemini 在不同工作情境下應該如何協助使用者。
+
+簡單來說：
+
+* `packages/` 解決「Gemini 可以做什麼」
+* `skills/` 解決「Gemini 應該怎麼做」
+* `GEMINI.md` 解決「Gemini 在本 workspace 中必須遵守哪些共通規則」
+
+---
+
+## 專案目的
+
+這個專案希望成為日常開發時的 Gemini CLI 顧問工具箱，協助開發者把常見的開發、分析、文件與維運工作流程標準化。
+
+可協助處理的工作包含：
+
+* 分析程式錯誤、Log、SQL、API、WebForm、IIS、伺服器與系統整合問題
+* 協助撰寫、重構、檢查與說明程式碼
+* 查詢 Redmine 議題並整理需求背景
+* 產生需求文件、Runbook、部署文件與 DB Schema 文件
+* 整理 SA 技術規格文件
+* 產生流程圖或 Mermaid 內容
+* 將零散需求、問題紀錄與程式觀察整理成可交付文件
+* 協助不同專案維持一致的工作規範、安全邊界與變更管制流程
+
+此專案的核心目標是讓 Gemini CLI 在日常開發工作中能更有效率地輔助使用者。
+
+---
+
+## 適合使用情境
+
+此專案適合以下使用者或團隊：
+
+* 想把 Gemini CLI 作為日常開發助理的工程師
+* 需要長期累積內部開發規範、文件模板與分析流程的團隊
+* 想透過 MCP Server 串接 Redmine、檔案系統、DB metadata 或其他內部工具的開發者
+* 經常需要產出 SA 規格、需求文件、Runbook、DB 文件、流程圖或問題分析文件的人員
+* 希望 Gemini CLI 在不同專案中都能維持一致工作規範與安全邊界的使用者
+
+典型使用方式：
+
+1. Clone 此 repository。
+2. 設定 `.gemini/.env` 與 `.gemini/settings.json`。
+3. 啟動 Gemini CLI。
+4. 透過目前工作目錄或 `/directory add` 加入目標專案。
+5. 讓 Gemini 協助分析、開發、重構、撰寫文件或排查問題。
+6. 視需要擴充新的 Skill 或 MCP Server。
+
+---
+
+## 專案結構
+
+| 路徑                 | 說明                                                         |
+| ------------------ | ---------------------------------------------------------- |
+| `packages/`        | MCP Server 程式碼，每個 package 代表一個可被 Gemini CLI 呼叫的工具服務        |
+| `skills/`          | Gemini Skills，定義顧問角色、工作流、文件格式與操作規範                         |
+| `.gemini/`         | Gemini CLI 專案設定，例如 `settings.json`、`.env.example`、commands |
+| `docs/`            | 專案文件與文件產出位置                                                |
+| `docs/_generated/` | Gemini 對話產生的文件輸出目錄，預設不進 Git                                |
+| `GEMINI.md`        | Gemini CLI 進入專案後讀取的專案層規則                                   |
+| `README.md`        | 給 GitHub 使用者與開發者看的專案說明                                     |
+
+---
+
+## 目前功能
+
+### MCP Servers
+
+MCP Server 用來提供 Gemini CLI 可呼叫的工具能力。
+MCP Server 的實際註冊設定集中在 `.gemini/settings.json`。
+
+| MCP Server    | 路徑                       | 狀態  | 用途                            |
+| ------------- | ------------------------ | --- | ----------------------------- |
+| Redmine MCP   | `packages/redmine-mcp`   | 已建立 | 查詢 Redmine 議題                 |
+| File MCP      | `packages/file-mcp`      | 已建立 | 本機檔案與資料夾操作                    |
+| Dev Docs MCP  | `packages/dev-doc-mcp`   | 已建立 | 產生需求文件、Runbook、DB Schema 文件內容 |
+| Flowchart MCP | `packages/flowchart-mcp` | 已建立 | 產生流程圖或 Mermaid 內容             |
+
+進入 Gemini CLI 後，可以使用以下指令確認目前已載入的 MCP Server 與 tools：
+
+```text
+/mcp
+```
+
+若調整 `.gemini/settings.json` 後需要重新載入 MCP Server，可使用：
+
+```text
+/mcp reload
+```
+
+### Gemini Skills
+
+Gemini Skill 用來定義 Gemini 在特定工作情境下的角色、工作流、輸出格式與限制。
+
+| Skill         | 路徑                              | 狀態  | 用途              |
+| ------------- | ------------------------------- | --- | --------------- |
+| Dev Docs      | `skills/dev-docs/SKILL.md`      | 已啟用 | 常用文件工作流         |
+| SA Consultant | `skills/sa-consultant/SKILL.md` | 已啟用 | SA 顧問與技術規格文件工作流 |
+
+正式啟用的 Skill 會列在：
+
+```text
+skills/_index.md
+```
+
+`skills/_template/` 只作為開發者建立新 Skill 時的範例模板，不應被加入 `_index.md`。
+
+修改 `GEMINI.md`、`skills/_index.md` 或正式 Skill 後，請在 Gemini CLI 中執行：
+
+```text
+/memory refresh
+/memory show
+```
+
+確認最新規則與 Skill 已被載入。
+
+---
 
 ## 快速開始
 
-```bash
-cd skills-hub
-npm install
+以下步驟適合第一次 clone 本 repository 的開發者，用來完成安裝、環境變數設定、Gemini CLI 啟動、MCP Server 驗證，以及 `GEMINI.md` / Skills 載入確認。
 
-# 測試 MCP server 是否能啟動
+### 1. Clone repository
+
+```bash
+git clone https://github.com/GurumiTs/skills-hub.git
+cd skills-hub
+```
+
+### 2. 安裝 dependencies
+
+```bash
+npm install
+```
+
+### 3. 建立環境變數檔案
+
+本專案建議將 Gemini CLI 與 MCP Server 需要的環境變數集中放在 `.gemini/.env`。
+
+請先複製環境變數範例檔：
+
+Linux / macOS：
+
+```bash
+cp .gemini/.env.example .gemini/.env
+```
+
+Windows PowerShell：
+
+```powershell
+Copy-Item .gemini/.env.example .gemini/.env
+```
+
+接著依照實際需要修改 `.gemini/.env`。
+
+常見需要設定的變數包含：
+
+| 變數                | 用途                                 |
+| ----------------- | ---------------------------------- |
+| `GEMINI_API_KEY`  | Gemini CLI API Key，建議由系統環境變數提供     |
+| `REDMINE_URL`     | Redmine 網址                         |
+| `REDMINE_API_KEY` | Redmine API Key                    |
+| `FILE_MCP_ROOTS`  | file-mcp 允許讀寫的根目錄                  |
+| `MSSQL_CONN`      | dev-doc-mcp 查詢 DB metadata 使用的連線字串 |
+
+請不要將真實 API Key、Password、Token、Cookie 或 Connection String commit 到 GitHub。
+
+如果只想先測試 Gemini CLI 與本 repository 的 Skill / memory 載入，可以先保留部分 MCP 相關變數空白；但若要使用 Redmine、file-mcp 或 DB metadata 相關工具，則需要補齊對應變數。
+
+### 4. 檢查 Gemini CLI 專案設定
+
+Gemini CLI 的專案設定放在：
+
+```text
+.gemini/settings.json
+```
+
+此檔案主要用來註冊 MCP Server runtime 設定。
+
+請確認 `.gemini/settings.json` 中的 MCP Server 路徑與目前 repository 結構一致，例如：
+
+```text
+packages/redmine-mcp
+packages/file-mcp
+packages/dev-doc-mcp
+packages/flowchart-mcp
+```
+
+如果你新增、移除或調整 MCP Server，後續也需要同步更新 `.gemini/settings.json`。
+
+### 5. 測試 MCP Server 是否能單獨啟動
+
+可依需求分別測試目前已提供的 MCP Server：
+
+```bash
 npm run dev:redmine
 npm run dev:file
 npm run dev:devdocs
-
-# MCP Inspector測試呼叫工具 (根目錄執行)
-npx @modelcontextprotocol/inspector -- node ./packages/dev-doc-mcp/index.js
-
-# 執行 gemini
-npx -y @google/gemini-cli
 ```
 
-> 提醒：`redmine-mcp` 需要 `REDMINE_API_KEY`（以及可選的 `REDMINE_URL`）
+如果 repository 中已建立 Flowchart MCP 的啟動 script，也可以執行：
 
-## 新增一個 skill
-1. 複製 `packages/_template` 成 `packages/<new-skill>`
-2. 修改 `package.json` 的 name/bin
-3. 在 `index.js` 用 `server.tool(...)` 加工具
-4. 在 `.gemini/settings.json` 註冊 server
+```bash
+npm run dev:flowchart
+```
 
-## Gemini CLI 連線
-請參考：
-- `docs/gemini-setup.md`
-- `.gemini/settings.json`（本 repo 也放了一份可直接用的設定）
+若上述指令失敗，請先檢查：
+
+* root `package.json` 的 `scripts` 是否存在對應項目
+* MCP Server package 路徑是否正確
+* `.gemini/.env` 是否已填入必要環境變數
+* Node.js / npm 版本是否符合專案需求
+* MCP Server 是否有缺少 dependencies
+
+### 6. 使用 MCP Inspector 測試工具
+
+可使用 MCP Inspector 測試單一 MCP Server 的 tools 是否能正常啟動與回應。
+
+例如測試 `dev-doc-mcp`：
+
+```bash
+npx @modelcontextprotocol/inspector -- node ./packages/dev-doc-mcp/index.js
+```
+
+其他 MCP Server 可依照實際 package 路徑替換：
+
+```bash
+npx @modelcontextprotocol/inspector -- node ./packages/<mcp-package>/index.js
+```
+
+### 7. 啟動 Gemini CLI
+
+可直接使用 `npx` 啟動：
+
+```bash
+npx @google/gemini-cli
+```
+
+或先全域安裝：
+
+```bash
+npm install -g @google/gemini-cli
+gemini
+```
+
+第一次進入 Gemini CLI 後，建議將此 repository 所在資料夾設為 trusted workspace：
+
+```text
+/permissions trust
+```
+
+若 workspace 未被信任，Gemini CLI 可能不會載入本 repository 的 workspace 設定、`.env`、MCP Server 或 memory context。
+
+### 8. 確認 MCP Server 是否載入
+
+進入 Gemini CLI 後執行：
+
+```text
+/mcp
+```
+
+確認 `.gemini/settings.json` 中設定的 MCP Server 是否已成功載入。
+
+若你的 Gemini CLI 版本支援 MCP reload，也可以在調整 MCP 設定後執行：
+
+```text
+/mcp reload
+```
+
+如果 MCP Server 沒有出現，請檢查：
+
+* `.gemini/settings.json` 的 `mcpServers` 設定是否正確
+* MCP Server 的 package 路徑是否正確
+* 對應的環境變數是否已設定
+* MCP Server 是否能用 `npm run dev:<name>` 單獨啟動
+* 目前 workspace 是否已被 trust
+
+### 9. 確認 GEMINI.md 與 Skills 是否載入
+
+本 repository 的 Gemini CLI 共通規則定義在：
+
+```text
+GEMINI.md
+```
+
+正式啟用的 Skill import 清單定義在：
+
+```text
+skills/_index.md
+```
+
+修改 `GEMINI.md`、`skills/_index.md` 或任何正式 Skill 後，請在 Gemini CLI 中重新載入 memory：
+
+```text
+/memory reload
+/memory show
+```
+
+如果你的 Gemini CLI 版本仍使用舊版指令，請依實際版本改用：
+
+```text
+/memory refresh
+/memory show
+```
+
+確認目前載入的 context 應包含：
+
+* `GEMINI.md`
+* `skills/_index.md`
+* `skills/_index.md` 中實際 import 的正式 Skill 文件
+
+確認目前載入的 context 不應包含：
+
+* `skills/_template/SKILL.md`
+
+如果 `skills/_template/SKILL.md` 出現在 memory 中，代表設定可能有誤，請檢查 `skills/_index.md` 是否不小心引用了模板。
+
+### 10. 開始使用
+
+啟動完成後，可以直接在 Gemini CLI 中提出開發輔助需求，例如：
+
+```text
+請分析目前專案的登入流程與相關檔案。
+```
+
+```text
+請根據這段錯誤 Log 判斷可能原因，並列出檢查步驟。
+```
+
+```text
+請根據目前需求整理一份 SA 技術規格文件。
+```
+
+```text
+請查詢 Redmine issue #1234，整理需求背景、待確認問題與開發影響。
+```
+
+```text
+請根據這個資料表結構產生 DB Schema 文件。
+```
+
+```text
+請把這段流程整理成 Mermaid flowchart。
+```
+
+若要讓 Gemini 協助其他專案，請在 Gemini CLI 中切換到目標專案目錄，或使用 Gemini CLI 支援的多目錄 / 工作目錄方式，讓 Gemini 以該目標專案作為主要分析與開發對象。
+
+### 11. 常見檢查指令
+
+Gemini CLI 內常用指令：
+
+```text
+/mcp
+/mcp reload
+/memory reload
+/memory show
+/permissions trust
+```
+
+本 repository 常用 npm 指令：
+
+```bash
+npm install
+npm run dev:redmine
+npm run dev:file
+npm run dev:devdocs
+```
+
+如果有新增其他 MCP Server，請同步確認 root `package.json` 是否已加入對應的 `npm run dev:<name>` script。
+
+---
+
+## 新增 Gemini Skill
+
+Gemini Skill 放在 `skills/` 底下，用來定義 Gemini 在特定任務中的工作方式。
+
+Skill 應優先描述「什麼情境下該怎麼協助使用者」，而不是把所有工具操作細節都寫進 Skill。
+若某個 Skill 明確需要搭配 MCP Server，才需要在 Skill 中描述可搭配的工具。
+
+### 1. 複製模板
+
+Linux / macOS：
+
+```bash
+cp -r skills/_template skills/<new-skill>
+```
+
+Windows PowerShell：
+
+```powershell
+Copy-Item -Recurse skills/_template skills/<new-skill>
+```
+
+### 2. 修改 Skill 內容
+
+修改新建立的檔案：
+
+```text
+skills/<new-skill>/SKILL.md
+```
+
+建議至少包含：
+
+* Skill 目的
+* 使用時機
+* 不使用時機
+* 預期輸入與輸出
+* 工作流程
+* 輸出格式
+* 檔案輸出規則
+* 安全限制
+* 可搭配的 MCP 工具，可選，僅在該 Skill 明確需要工具能力時撰寫
+* 範例 Prompt
+
+### 3. 啟用 Skill
+
+在 `skills/_index.md` 中加入 import，例如：
+
+```md
+@./<new-skill>/SKILL.md
+```
+
+只有被 `skills/_index.md` import 的 Skill，才會被 Gemini CLI 載入。
+
+請不要把以下模板檔案加入 `skills/_index.md`：
+
+```text
+skills/_template/SKILL.md
+```
+
+### 4. 重新載入 Gemini memory
+
+進入 Gemini CLI 後執行：
+
+```text
+/memory refresh
+/memory show
+```
+
+確認新的 Skill 內容已被載入。
+
+---
+
+## 新增 MCP Server
+
+MCP Server 放在 `packages/` 底下，用來提供 Gemini CLI 可呼叫的工具能力。
+
+新增 MCP Server 時，建議同時確認以下內容：
+
+* MCP Server package 是否建立完成
+* root `package.json` 是否加入對應啟動 script
+* `.gemini/settings.json` 是否註冊 MCP Server
+* `.gemini/.env.example` 是否補上必要環境變數範例
+* README 是否更新功能表與啟動方式
+* MCP Server 是否能透過 Gemini CLI `/mcp` 正常載入
+
+### 1. 建立 package 目錄
+
+建議命名：
+
+```text
+packages/<new-name>-mcp
+```
+
+例如：
+
+* `packages/jira-mcp`
+* `packages/db-mcp`
+* `packages/api-test-mcp`
+
+### 2. 建立基本檔案
+
+通常至少需要：
+
+* `packages/<new-name>-mcp/package.json`
+* `packages/<new-name>-mcp/index.js`
+
+### 3. 在 root `package.json` 加入 script
+
+例如：
+
+```json
+{
+  "scripts": {
+    "dev:<name>": "node packages/<new-name>-mcp/index.js"
+  }
+}
+```
+
+### 4. 在 `.gemini/settings.json` 註冊 MCP Server
+
+在 `mcpServers` 底下加入新的 server 設定。
+
+請避免將真實 API Key、Token、Password、Connection String 或其他機密資訊直接寫入 `.gemini/settings.json`。
+需要機密值時，應透過環境變數或 secret store 提供。
+
+### 5. 更新環境變數範例
+
+如果新的 MCP Server 需要環境變數，請同步更新：
+
+```text
+.gemini/.env.example
+```
+
+範例值只能使用 placeholder，不可填入真實機密。
+
+### 6. 驗證 MCP Server
+
+可先用 npm script 單獨啟動：
+
+```bash
+npm run dev:<name>
+```
+
+也可以使用 MCP Inspector 測試：
+
+```bash
+npx @modelcontextprotocol/inspector -- node ./packages/<new-name>-mcp/index.js
+```
+
+啟動 Gemini CLI 後執行：
+
+```text
+/mcp
+```
+
+確認新的 MCP Server 是否已載入。
+
+若有調整 MCP 設定，可執行：
+
+```text
+/mcp reload
+```
+
+---
+
+## 文件產出規則
+
+若 Gemini 是在協助維護本 `skills-hub` repository，對話產生的 Markdown 文件預設應放在：
+
+```text
+docs/_generated/
+```
+
+若 Gemini 是協助其他目標專案，例如透過目前工作目錄或 `/directory add` 指向某個業務系統專案，文件應優先依照該目標專案的文件結構與使用者指定路徑產出。
+
+本 repository 中的 `docs/_generated/` 主要用於存放與 `skills-hub` 本身相關的草稿、分析紀錄或臨時規格，預設不建議 commit 到 GitHub。
+
+常見目錄：
+
+| 類型      | 建議輸出位置                          |
+| ------- | ------------------------------- |
+| SA 技術規格 | `docs/_generated/sa-specs/`     |
+| 一般開發文件  | `docs/_generated/dev-docs/`     |
+| DB 文件   | `docs/_generated/db/`           |
+| 需求文件    | `docs/_generated/requirements/` |
+| 流程圖文件   | `docs/_generated/flowchart/`    |
+
+如果某份文件未來要成為正式文件，建議先人工檢查內容，再移到正式文件目錄並 commit。
+
+---
+
+## 變更管制原則
+
+本 repository 的根目錄 `GEMINI.md` 定義了 Gemini CLI 執行任務時的共通規則與變更管制原則。
+
+凡是涉及建立、修改、刪除或搬移實體檔案的操作，Gemini 應先提出變更提案，等使用者明確同意後，才能實際套用。
+
+此規則適用於：
+
+* 本 `skills-hub` repository
+* 使用者目前所在的工作目錄
+* 使用者透過 `/directory add` 加入的目標專案
+* 使用者明確指定要分析或修改的專案
+* 任何透過 MCP Server、CLI 指令或檔案工具可能造成異動的檔案或外部系統資料
+
+變更提案應包含：
+
+* 風險評估
+* 預計修改檔案
+* 修改摘要
+* 驗證方式
+* 回滾方式
+
+此規則主要是為了避免 Gemini 在未確認的情況下直接修改專案檔案、設定或外部系統資料。
+
+---
+
+## 安全注意事項
+
+使用本專案時，請注意：
+
+* 不要 commit `.gemini/.env`
+* 不要 commit API Key、Password、Token、Cookie、Connection String、私人憑證或公司內部敏感資訊
+* `.gemini/.env.example` 只能放 placeholder，不可放真實機密
+* 使用 file-mcp 時，建議限制 `FILE_MCP_ROOTS`，避免 Gemini 讀寫到不相關或敏感目錄
+* 寫入檔案前應確認目標路徑是否應被 Git 追蹤
+* 對話生成文件應優先放在 `_generated`、`drafts`、`temp` 或使用者指定的草稿目錄
+* 若 repository 內含公司內部資訊，請確認 repository visibility 與權限設定
+* 涉及正式環境、資料庫異動、部署、權限、資安或批次作業時，應先評估風險與回滾方式
+
+若不小心將機密資訊 commit 到 GitHub，應立即移除該機密、重新產生新的 key / token，並視情況清理 Git history。
+
+---
+
+## 常用指令
+
+### npm
+
+```bash
+npm install
+npm run dev:redmine
+npm run dev:file
+npm run dev:devdocs
+npm run dev:flowchart
+```
+
+### Gemini cli
+
+```bash
+/mcp
+/mcp reload
+/memory refresh
+/memory show
+/permissions trust
+/directory add <path>
+/directory show
+```
+
+### MCP Inspector
+```bash
+npx @modelcontextprotocol/inspector -- node ./packages/dev-doc-mcp/index.js
+```
+
+---
+
+## 相關文件
+
+* `docs/gemini-setup.md`：Gemini CLI 連線與設定說明
+* `.gemini/settings.json`：MCP Server runtime 註冊設定
+* `.gemini/.env.example`：環境變數範例，不包含真實機密
+* `GEMINI.md`：Gemini CLI 專案層共通規則
+* `skills/_index.md`：正式啟用的 Skill import 清單
+* `skills/_template/`：建立新 Skill 時可複製的模板
+
+---
+
+## Roadmap
+
+後續可視需求擴充以下方向。
+
+### MCP Server
+
+* Jira / GitHub Issues MCP
+* API 測試 MCP
+* DB 查詢或 metadata MCP
+* Git 操作輔助 MCP
+* 部署檢查 MCP
+* Log 分析 MCP
+
+### Gemini Skills
+
+* 更多文件型 Skill
+* 更完整的 SA / 架構設計 Skill
+* Code Review Skill
+* Legacy System Maintenance Skill
+* Incident / RCA 分析 Skill
+* SQL / DB Review Skill
+
+### 文件與維護流程
+
+* 自動化文件輸出流程
+* 專案初始化腳本
+* Skill 建立檢查清單
+* MCP Server 建立檢查清單
+* README / GEMINI.md / skills/_index.md 一致性檢查
+
+---
+
+## Copyright and Disclaimer / 著作權與免責聲明
+
+### 中文
+
+Copyright © 2026 GurumiTs. All rights reserved.
+
+除非本 repository 另有提供 `LICENSE` 檔案或取得作者書面授權，否則本專案之程式碼、文件、設定範本與相關內容均保留所有權利。未經授權，不得任意複製、散布、修改、再授權或用於商業用途。
+
+本專案以「現狀」提供，作者不保證其完整性、正確性、適用性、安全性或可用性。使用者應自行評估使用風險，並自行負責 API Key、連線字串、內部資料、公司機密與系統權限之保護。因使用或修改本專案所造成的任何直接或間接損失，作者不承擔責任。
+
+若本專案後續加入正式開源授權，請以 repository 根目錄中的 `LICENSE` 檔案為準。
+
+### English
+
+Copyright © 2026 GurumiTs. All rights reserved.
+
+Unless a `LICENSE` file is provided in this repository or written permission is granted by the author, all source code, documentation, configuration templates, and related materials in this project are protected by copyright. No permission is granted to copy, distribute, modify, sublicense, or use this project for commercial purposes without authorization.
+
+This project is provided “as is”, without warranty of any kind, including but not limited to correctness, completeness, fitness for a particular purpose, security, or availability. Users are responsible for evaluating their own risks and for protecting API keys, connection strings, internal data, company confidential information, and system permissions. The author shall not be liable for any direct or indirect damages arising from the use or modification of this project.
+
+If an official open-source license is added later, the `LICENSE` file in the repository root shall take precedence.
