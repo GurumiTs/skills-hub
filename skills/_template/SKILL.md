@@ -1,66 +1,75 @@
-# {{SKILL_NAME}} Skill
+---
+name: {{SKILL_NAME}}
+description: {{SKILL_DESCRIPTION}}
+---
+
+# {{SKILL_DISPLAY_NAME}} Skill
 
 > 這是一份 Skill 範例模板。
-> 請複製到 `skills/<skill-name>/SKILL.md` 後，再依照實際用途調整內容。
+> 請複製到 `.gemini/skills/<skill-name>/SKILL.md` 後，再依照實際用途調整內容。
 >
-> 注意：`skills/_template/` 只是範例資料夾，請不要在 `skills/_index.md` 中引用本檔案，避免 Gemini CLI 執行時讀到模板內容。
+> 注意：正式 Gemini CLI workspace skills 應放在 `.gemini/skills/<skill-name>/SKILL.md`，並使用 `/skills reload` 與 `/skills list` 驗證是否被 discovery。
+>
+> 注意：本模板位於 `skills/_template/`，只是給開發者複製用的範例，不是正式 Skill，不應放入 `.gemini/skills/`，避免被 Gemini CLI 誤掃描。
 >
 > 注意：複製成正式 Skill 後，請移除所有模板說明、範例佔位符與未填寫項目，例如 `{{PLACEHOLDER}}`、`請填寫`、不適用的範例說明等。
 >
-> 注意：正式啟用的 Skill 以 `skills/_index.md` 中實際 import 的 Skill 文件為準。即使 `skills/` 目錄下存在某個 Skill，若未被 `skills/_index.md` import，也不可視為正式啟用。
+> 注意：Skill 只應定義「能力、工作流程、輸出格式與限制」，不應取代 Agent 的主要身份。Agent 的角色、責任與 handoff 邊界應由 `.gemini/agents/` 中的 Agent 定義決定。
 >
-> 注意：Skill 中定義的專業角色屬於「任務層專業角色」，只能細化 Gemini 在特定任務中的工作方式，不得覆蓋根目錄 `GEMINI.md` 的共通規則、Change Control、安全限制、檔案修改前確認流程與回滾要求。
+> 注意：Skill 不得覆蓋根目錄 `GEMINI.md` 的共通規則、Change Control、安全限制、檔案修改前確認流程與回滾要求。
 
 ---
 
-## 1. 專業角色定位
+## 1. 能力定位
 
-請指定此 Skill 啟用後，Gemini 應該扮演的專業角色。
+請指定此 Skill 提供哪一種專業能力。
 
-此角色應明確描述 Gemini 在此 Skill 中的觀點、責任與輸出方向。
+此 Skill 不應宣告「Gemini 應擔任某個角色」，而應描述「使用此 Skill 時，Agent 應套用哪一種能力或工作方法」。
 
 範例：
 
-* Solution Architect / System Analyst Consultant
-* Senior Code Reviewer
-* Database Consultant
-* DevOps Runbook Writer
-* Security Review Assistant
-* Developer Documentation Consultant
-* Redmine Issue Analysis Assistant
+* SA / Solution Architecture 分析能力
+* Developer Implementation 能力
+* Code Review 能力
+* Test Engineering 能力
+* Security Review 能力
+* Release / Ops 能力
+* Incident RCA 能力
 
 請填寫：
 
-當此 Skill 啟用時，Gemini 應擔任：
+此 Skill 提供以下能力：
 
-> {{PROFESSIONAL_ROLE_NAME}}
+> {{CAPABILITY_NAME}}
 
-此專業角色的主要任務是協助使用者處理 {{ROLE_TASK_SCOPE}}。
+當此 Skill 被啟用時，使用它的 Agent 應套用 {{CAPABILITY_METHOD}}，協助使用者處理 {{CAPABILITY_TASK_SCOPE}}。
+
+此 Skill 不改變目前 Agent 的主要身份；若本 Skill 由特定 Agent 使用，仍應以該 Agent 的角色定義為主。
 
 ---
 
-### 1.1 角色責任
+### 1.1 能力範圍
 
-請列出此專業角色在任務中應主動協助的內容。
+請列出此 Skill 在任務中應主動協助的內容。
 
 範例：
 
-* 從 SA 角度協助釐清需求、流程、商業邏輯與系統邊界。
-* 從 Code Reviewer 角度檢查正確性、可維護性、相容性與潛在風險。
-* 從 DB Consultant 角度分析 SQL、Schema、資料正確性、效能與交易安全。
-* 從文件顧問角度整理可讀、可維護、可交接的技術文件。
+* 釐清需求、流程、商業邏輯與系統邊界。
+* 檢查程式碼正確性、可維護性、相容性與潛在風險。
+* 分析 SQL、Schema、資料正確性、效能與交易安全。
+* 整理可讀、可維護、可交接的技術文件。
 
 請填寫：
 
-* {{ROLE_RESPONSIBILITY_1}}
-* {{ROLE_RESPONSIBILITY_2}}
-* {{ROLE_RESPONSIBILITY_3}}
+* {{CAPABILITY_SCOPE_1}}
+* {{CAPABILITY_SCOPE_2}}
+* {{CAPABILITY_SCOPE_3}}
 
 ---
 
-### 1.2 角色限制
+### 1.2 使用邊界
 
-此 Skill 的專業角色不得覆蓋根目錄 `GEMINI.md` 的共通規則。
+此 Skill 不得覆蓋根目錄 `GEMINI.md` 的共通規則，也不得取代 Agent 的主要角色定義。
 
 Gemini 啟用此 Skill 時，仍必須遵守：
 
@@ -75,23 +84,14 @@ Gemini 啟用此 Skill 時，仍必須遵守：
 
 可依 Skill 需求補充：
 
-* {{ROLE_BOUNDARY_1}}
-* {{ROLE_BOUNDARY_2}}
+* {{CAPABILITY_BOUNDARY_1}}
+* {{CAPABILITY_BOUNDARY_2}}
 
 ---
 
 ## 2. Skill 目的
 
 簡短說明這個 Skill 要解決什麼問題。
-
-範例：
-
-* 協助整理技術規格文件
-* 協助產生維運 Runbook
-* 協助分析 Redmine 議題並整理處理建議
-* 協助產生資料庫文件
-* 協助進行程式碼審查
-* 協助分析系統異常與排查方向
 
 請填寫：
 
@@ -102,14 +102,6 @@ Gemini 啟用此 Skill 時，仍必須遵守：
 ## 3. 使用時機
 
 列出什麼情境下 Gemini 應該使用這個 Skill。
-
-範例：
-
-* 使用者要求整理 {{DOCUMENT_TYPE}}。
-* 使用者提供 {{INPUT_SOURCE}}，希望轉成 {{OUTPUT_FORMAT}}。
-* 使用者需要針對 {{SYSTEM_OR_PROCESS}} 做分析。
-* 使用者要求從特定專業角度檢查程式碼、系統流程、文件或設定。
-* 使用者要求產出可交付、可驗證、可維護的開發輔助內容。
 
 請填寫：
 
@@ -122,15 +114,6 @@ Gemini 啟用此 Skill 時，仍必須遵守：
 ## 4. 不使用時機
 
 列出哪些情境不適合使用這個 Skill，避免 Gemini 誤套用。
-
-範例：
-
-* 使用者只是詢問簡單語法。
-* 使用者只是要求翻譯。
-* 使用者要的是單純聊天、摘要或非技術性內容。
-* 使用者要的是實作程式碼，而不是分析、審查或文件。
-* 任務明顯屬於其他 Skill。
-* 任務與此 Skill 的專業角色、輸入資料或輸出格式無關。
 
 請填寫：
 
@@ -151,21 +134,10 @@ Gemini 啟用此 Skill 時，仍必須遵守：
 
 > 此 Skill 預設不依賴特定 MCP Server。若任務需要外部資訊，Gemini 應依目前環境中可用的 read-only 工具能力輔助分析，並遵守 `GEMINI.md` 的 MCP 使用規則。
 
-範例：
-
-| 工具能力        | 用途                             | 使用限制           |
-| ----------- | ------------------------------ | -------------- |
-| 專案檔案讀取      | 讀取指定程式碼、設定檔或文件                 | 僅限與任務相關範圍      |
-| 文件產生        | 產生 Markdown、Runbook 或技術文件內容    | 寫檔前仍需取得使用者同意   |
-| 議題系統查詢      | 查詢 Redmine、GitHub Issues 或需求來源 | 僅查詢指定或相關議題     |
-| 資料庫結構查詢     | 讀取 Schema、欄位或關聯資訊              | 不得直接異動資料       |
-| 流程圖產生       | 產生 Mermaid 或流程圖草稿              | 不得憑空補未確認流程     |
-| Log 或錯誤資訊讀取 | 讀取錯誤訊息、Log 或系統輸出               | 不得讀取與任務無關的敏感資訊 |
-
 請填寫：
 
-| 工具能力                  | 用途            | 使用限制        |
-| --------------------- | ------------- | ----------- |
+| 工具能力 | 用途 | 使用限制 |
+|---|---|---|
 | {{TOOL_CAPABILITY_1}} | {{PURPOSE_1}} | {{LIMIT_1}} |
 | {{TOOL_CAPABILITY_2}} | {{PURPOSE_2}} | {{LIMIT_2}} |
 
@@ -174,21 +146,6 @@ Gemini 啟用此 Skill 時，仍必須遵守：
 ## 6. 預期輸入
 
 說明使用者通常會提供哪些資料。
-
-範例：
-
-* 需求描述
-* 問題現象
-* 程式碼片段
-* 專案路徑
-* Redmine 議題
-* 資料庫欄位
-* 系統流程
-* 錯誤訊息
-* Log 內容
-* API 規格
-* 操作畫面或錯誤截圖
-* 使用者希望產出的文件格式
 
 請填寫：
 
@@ -201,20 +158,6 @@ Gemini 啟用此 Skill 時，仍必須遵守：
 ## 7. 預期輸出
 
 說明這個 Skill 最後應該產出什麼。
-
-範例：
-
-* Markdown 技術文件
-* 問題分析摘要
-* 修正建議
-* 測試案例表
-* 風險與緩解清單
-* 操作步驟
-* Mermaid 流程圖
-* Code Review 結論
-* 需求拆解結果
-* 待確認問題清單
-* 驗證方式與回滾方式
 
 請填寫：
 
@@ -259,22 +202,6 @@ Gemini 啟用此 Skill 時，仍必須遵守：
 * 如果目標路徑可能被 Git 追蹤，寫入前必須提醒使用者。
 * 任何實體檔案新增、修改、刪除、搬移或覆寫，都必須先遵守根目錄 `GEMINI.md` 的 Change Control。
 
-範例：
-
-若任務目標是本 `skills-hub` repository：
-
-```text
-docs/_generated/{{skill-name}}/
-```
-
-若任務目標是其他專案：
-
-```text
-<target-project>/docs/_generated/{{skill-name}}/
-```
-
-或依使用者指定路徑輸出。
-
 請填寫：
 
 預設輸出位置：`{{DEFAULT_OUTPUT_PATH}}`
@@ -297,8 +224,6 @@ docs/_generated/{{skill-name}}/
 * 不確定的資訊請標示為假設，不要寫成已確認事實。
 * 如果目標路徑可能被 Git 追蹤，寫檔前必須提醒使用者。
 * 若本 Skill 的規則與根目錄 `GEMINI.md` 衝突，必須優先遵守 `GEMINI.md`。
-* 若本 Skill 的規則比根目錄 `GEMINI.md` 更嚴格，應採用較嚴格的規則。
-* 若任務涉及實體檔案變更，必須先提出變更提案，並在使用者明確同意後才可套用。
 * 若任務涉及正式環境、資料庫異動、部署、權限或資安，必須主動提醒風險與回滾方式。
 * 不得將臨時測試方案包裝成正式長期方案。
 * 不得擅自擴大任務範圍，讀取或修改與任務無關的內容。
@@ -314,17 +239,6 @@ docs/_generated/{{skill-name}}/
 
 請定義此 Skill 回覆時建議採用的輸出格式。
 
-如果此 Skill 沒有固定格式，請描述一般輸出原則。
-
-範例：
-
-* 先給結論，再補充原因。
-* 優先使用條列式整理重點。
-* 對技術文件，應清楚區分背景、目標、範圍、設計、風險、測試與回滾。
-* 對問題分析，應清楚區分現象、可能原因、驗證方式、修正建議與後續觀察。
-* 對 Code Review，應清楚區分問題等級、位置、原因、影響與建議修正方式。
-* 對流程圖，應優先提供 Mermaid 內容，並標示假設與待確認流程。
-
 請填寫：
 
 此 Skill 的建議輸出格式為：
@@ -338,20 +252,6 @@ docs/_generated/{{skill-name}}/
 ## 12. 範例 Prompt
 
 提供 2 到 3 個開發者或使用者可以參考的 Prompt。
-
-範例：
-
-```text
-請使用 {{SKILL_NAME}} Skill，幫我把以下需求整理成技術規格文件。
-```
-
-```text
-請根據這個 Redmine 議題內容，整理問題背景、影響範圍與建議處理方式。
-```
-
-```text
-請讀取指定檔案後，整理成一份 Markdown 說明文件。先不要寫檔，請先提出文件產生提案。
-```
 
 請填寫：
 
@@ -371,17 +271,16 @@ docs/_generated/{{skill-name}}/
 
 ## 13. 正式化前檢查清單
 
-複製本模板並完成正式 Skill 內容後，請在加入 `skills/_index.md` 前檢查：
+複製本模板並完成正式 Skill 內容後，請在放入 `.gemini/skills/<skill-name>/SKILL.md` 前檢查：
 
+* 是否已保留 YAML frontmatter，且 `name` 與 `description` 已填寫完成。
 * 是否已移除所有不適用的模板說明。
 * 是否已移除所有 `{{PLACEHOLDER}}`。
 * 是否已移除所有未填寫的「請填寫」內容。
 * 是否已確認 Skill 目的、使用時機與不使用時機清楚。
 * 是否已確認此 Skill 沒有覆蓋 `GEMINI.md` 的共通規則。
+* 是否已確認此 Skill 不會取代 Agent 的主要身份。
 * 是否已確認檔案輸出規則符合目標專案與 `skills-hub` 邊界。
 * 是否已確認沒有寫死不必要的 MCP Server alias。
 * 是否已確認沒有填入 API Key、Password、Token、Connection String 或其他機密資訊。
-* 是否已確認此 Skill 真的需要被 `skills/_index.md` import。
-* 是否已在 Gemini CLI 中執行 `/memory refresh` 與 `/memory show` 確認載入結果。
-
-正式啟用後，請確認 `skills/_index.md` 只 import 正式 Skill，不要 import `skills/_template/SKILL.md`。
+* 是否已在 Gemini CLI 中執行 `/skills reload` 與 `/skills list` 確認載入結果。
