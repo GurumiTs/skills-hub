@@ -50,10 +50,22 @@ feature/sdlc_pipeline
 | MCP Server | File | Purpose | Safety Model |
 |---|---|---|---|
 | Git MCP | `packages/git-mcp/index.js` | Read-only git status, diff, changed files, log | Allow roots via `GIT_MCP_ROOTS` / `FILE_MCP_ROOTS` |
-| DB Metadata MCP | `packages/db-metadata-mcp/index.js` | SQL Server metadata: tables, columns, indexes, routines | Metadata-only queries, requires read-only connection |
+| DB Metadata MCP | `packages/db-metadata-mcp/index.js` | SQL Server metadata: connection aliases, tables, columns, indexes, routines | Metadata-only queries, multiple read-only connection aliases, explicit `connection_key` support |
 | Test Runner MCP | `packages/test-runner-mcp/index.js` | Run allowlisted test commands | Allow roots + allowlisted command arrays |
 | Static Analysis MCP | `packages/static-analysis-mcp/index.js` | Detect project stack and run allowlisted lint/build commands | Allow roots + allowlisted command arrays |
 | Secret Scan MCP | `packages/secret-scan-mcp/index.js` | Local read-only secret pattern scanning with masked findings | Allow roots, masked output, excludes common generated folders |
+
+## DB Metadata Multi-Connection Support
+
+| Feature | Status |
+|---|---|
+| `DB_METADATA_CONNECTIONS` JSON alias map | Implemented |
+| `DB_METADATA_DEFAULT_CONNECTION` | Implemented |
+| Legacy fallback to `DB_METADATA_MSSQL_CONN` / `MSSQL_CONN` | Preserved |
+| `list_connections` tool | Implemented |
+| `suggest_connection` tool | Implemented |
+| `connection_key` parameter on metadata tools | Implemented |
+| Generic example aliases such as `dbexample-dev` / `dbexample-uat` | Implemented |
 
 ## Implemented Playbooks
 
@@ -75,8 +87,10 @@ feature/sdlc_pipeline
 | File | Change |
 |---|---|
 | `package.json` | Added npm dev scripts for SDLC MCP servers |
-| `.gemini/settings.json` | Registered Git, DB Metadata, Test Runner, Static Analysis, and Secret Scan MCP servers |
-| `.gemini/.env.example` | Added environment variable examples for SDLC MCP servers |
+| `.gemini/settings.json` | Registered Git, DB Metadata, Test Runner, Static Analysis, and Secret Scan MCP servers; added DB metadata multi-connection env |
+| `.gemini/.env.example` | Added environment variable examples for SDLC MCP servers and multi DB metadata aliases |
+| `.gemini/agents/db-agent.md` | Added DB connection alias selection rules |
+| `.gemini/skills/db-engineering/SKILL.md` | Added DB metadata alias selection workflow |
 
 ## Known Limitations
 
@@ -145,4 +159,13 @@ npx @modelcontextprotocol/inspector -- node ./packages/db-metadata-mcp/index.js
 npx @modelcontextprotocol/inspector -- node ./packages/test-runner-mcp/index.js
 npx @modelcontextprotocol/inspector -- node ./packages/static-analysis-mcp/index.js
 npx @modelcontextprotocol/inspector -- node ./packages/secret-scan-mcp/index.js
+```
+
+Recommended DB Metadata tool tests:
+
+```text
+list_connections
+suggest_connection(query_text="dbexample dev login requirement")
+db_metadata_health(connection_key="dbexample-dev")
+list_tables(connection_key="dbexample-dev")
 ```
