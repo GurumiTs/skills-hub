@@ -11,6 +11,12 @@
     "dev:redmine": "node --env-file=.env packages/redmine-mcp/index.js",
     "dev:file": "node packages/file-mcp/index.js",
     "dev:devdocs": "node packages/dev-doc-mcp/index.js",
+    "dev:flowchart": "node packages/flowchart-mcp/index.js",
+    "dev:git": "node packages/git-mcp/index.js",
+    "dev:dbmetadata": "node packages/db-metadata-mcp/index.js",
+    "dev:testrunner": "node packages/test-runner-mcp/index.js",
+    "dev:static": "node packages/static-analysis-mcp/index.js",
+    "dev:secrets": "node packages/secret-scan-mcp/index.js",
     "lint": "node -e \"console.log('Add ESLint later if you want')\""
   }
 }
