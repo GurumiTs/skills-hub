@@ -131,7 +131,41 @@ STATIC_ANALYSIS_ROOTS="D:\Workspace\TargetProject"
 SECRET_SCAN_ROOTS="D:\Workspace\TargetProject"
 ```
 
-## 7. MCP Smoke Test
+## 7. DB Metadata 多連線設定
+
+DB Metadata MCP 支援多組 connection alias。建議使用 `DB_METADATA_CONNECTIONS` 管理多個 read-only metadata 連線。
+
+範例：
+
+```env
+DB_METADATA_DEFAULT_CONNECTION="dbexample-dev"
+DB_METADATA_CONNECTIONS='{
+  "dbexample-dev": {
+    "type": "mssql",
+    "displayName": "DB Example DEV",
+    "description": "Development database for dbexample application metadata lookup.",
+    "environment": "dev",
+    "system": "dbexample",
+    "database": "DBExample_DEV",
+    "tags": ["dbexample", "dev", "development"],
+    "connectionString": "Server=YOUR_DEV_SERVER;Database=DBExample_DEV;User Id=YOUR_READONLY_USER;Password=YOUR_PASSWORD;Encrypt=true;TrustServerCertificate=true;"
+  },
+  "dbexample-uat": {
+    "type": "mssql",
+    "displayName": "DB Example UAT",
+    "description": "UAT database for dbexample application metadata lookup.",
+    "environment": "uat",
+    "system": "dbexample",
+    "database": "DBExample_UAT",
+    "tags": ["dbexample", "uat", "testing"],
+    "connectionString": "Server=YOUR_UAT_SERVER;Database=DBExample_UAT;User Id=YOUR_READONLY_USER;Password=YOUR_PASSWORD;Encrypt=true;TrustServerCertificate=true;"
+  }
+}'
+```
+
+DB Agent / DB Engineering Skill 應先使用 `list_connections` 或 `suggest_connection` 判斷 `connection_key`。如果候選連線不明確，必須先詢問使用者確認，不可猜測。
+
+## 8. MCP Smoke Test
 
 可用 npm script 單獨啟動 MCP Server：
 
@@ -153,9 +187,18 @@ npx @modelcontextprotocol/inspector -- node ./packages/static-analysis-mcp/index
 npx @modelcontextprotocol/inspector -- node ./packages/secret-scan-mcp/index.js
 ```
 
-## 8. 建議啟動方式
+DB Metadata MCP 建議先測：
 
-### 8.1 先產生計畫，不修改檔案
+```text
+list_connections
+suggest_connection(query_text="dbexample dev login requirement")
+db_metadata_health(connection_key="dbexample-dev")
+list_tables(connection_key="dbexample-dev")
+```
+
+## 9. 建議啟動方式
+
+### 9.1 先產生計畫，不修改檔案
 
 ```text
 /sdlc:plan Redmine #1234，目標專案 D:\Workspace\TargetProject。請先完成需求釐清、SA 分析、DB / Data 影響分析與開發計畫。先不要修改任何檔案。
@@ -173,7 +216,7 @@ npx @modelcontextprotocol/inspector -- node ./packages/secret-scan-mcp/index.js
 * Risks and Rollback Direction
 * Gate Decision Required
 
-### 8.2 確認後進入開發
+### 9.2 確認後進入開發
 
 ```text
 /sdlc:implement 使用剛才確認的 plan 開始實作。
@@ -181,19 +224,19 @@ npx @modelcontextprotocol/inspector -- node ./packages/secret-scan-mcp/index.js
 
 若尚未取得明確 approval，Gemini 應停止並要求確認。
 
-### 8.3 執行 Review
+### 9.3 執行 Review
 
 ```text
 /sdlc:review 請針對目前變更執行測試規劃、DB Review、Code Review 與 Security Review。
 ```
 
-### 8.4 產生 Release Package
+### 9.4 產生 Release Package
 
 ```text
 /sdlc:release 請根據本次變更產生部署步驟、回滾方式、UAT checklist 與維運交接內容。
 ```
 
-### 8.5 一鍵入口，但每個 Gate 停下
+### 9.5 一鍵入口，但每個 Gate 停下
 
 ```text
 /sdlc:run Redmine #1234，目標專案 D:\Workspace\TargetProject。
@@ -201,7 +244,7 @@ npx @modelcontextprotocol/inspector -- node ./packages/secret-scan-mcp/index.js
 
 `/sdlc:run` 應先進入 plan，並在每個 gate 停下要求確認，不應無人監督一路修改到 release。
 
-## 9. 常見問題
+## 10. 常見問題
 
 ### `/commands list` 看不到 `/sdlc:*`
 
@@ -237,6 +280,10 @@ npx @modelcontextprotocol/inspector -- node ./packages/secret-scan-mcp/index.js
 * 已執行 `/mcp reload`
 * 已執行 `npm install`
 * `.gemini/.env` 中的 allow roots 與 connection string 設定正確
+
+### DB Metadata tools 回覆要求指定 `connection_key`
+
+代表目前設定了多組 DB alias，但沒有設定 `DB_METADATA_DEFAULT_CONNECTION`，或工具無法安全推斷。請先用 `list_connections` / `suggest_connection`，再帶入明確的 `connection_key`。
 
 ### Pipeline 沒有繼續往下跑
 
