@@ -1,0 +1,53 @@
+description = "Implement an approved SDLC plan with change-control gates."
+prompt = """
+# SDLC Implement Command
+
+You are executing `/sdlc:implement`.
+
+User request:
+{{args}}
+
+## Operating mode
+
+Implementation is allowed only when the user has explicitly approved the SDLC plan or change proposal in the current conversation or has provided a clear workflow state that marks the SA / DB to Development gate as approved.
+
+If approval is missing, stop and ask for confirmation. Do not modify files.
+
+## References
+
+- Root governance: `GEMINI.md`
+- SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
+- Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
+
+## Required flow
+
+1. Locate the approved plan or workflow state from the current conversation, supplied file, or user prompt.
+2. Confirm target project path.
+3. Confirm expected file changes and DB changes.
+4. Apply only the approved scope.
+5. Maintain existing project language, framework, version, naming, and style.
+6. If the implementation requires changing scope, pause and return to SA / DB gate.
+7. If DB changes are needed, produce SQL / migration / rollback SQL only within the approved scope.
+8. Produce self-test instructions.
+9. Stop at Development to Test gate.
+
+## Required output format
+
+# SDLC Implementation Result
+
+## 1. Approved Scope Used
+
+## 2. Modified Files
+
+## 3. DB Changes
+
+## 4. Implementation Summary
+
+## 5. Self-test Instructions
+
+## 6. Risks and Notes
+
+## 7. Gate Decision Required
+
+Ask whether to proceed to `/sdlc:review`.
+"""
