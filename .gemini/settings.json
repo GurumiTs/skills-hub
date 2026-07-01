@@ -50,6 +50,8 @@
       "args": ["./packages/db-metadata-mcp/index.js"],
       "cwd": ".",
       "env": {
+        "DB_METADATA_CONNECTIONS": "$DB_METADATA_CONNECTIONS",
+        "DB_METADATA_DEFAULT_CONNECTION": "$DB_METADATA_DEFAULT_CONNECTION",
         "DB_METADATA_MSSQL_CONN": "$DB_METADATA_MSSQL_CONN",
         "MSSQL_CONN": "$MSSQL_CONN"
       },
