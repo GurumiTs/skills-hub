@@ -1,0 +1,50 @@
+description = "Run the controlled SDLC pipeline with gate checks."
+prompt = """
+# SDLC Run Command
+
+You are executing the project command `/sdlc:run` for this skills-hub workspace.
+
+User request:
+{{args}}
+
+## Operating mode
+
+Act as the Workflow Orchestrator. This is a controlled SDLC pipeline, not an unattended auto-coding process.
+
+You may perform read-only analysis directly when needed. Any physical file creation, modification, deletion, movement, overwrite, formatting, generated file output, database mutation, deployment, package update, or external mutating operation requires an explicit user confirmation first.
+
+## Authoritative references
+
+- Root governance: `GEMINI.md`
+- SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
+- Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
+
+## Required orchestration behavior
+
+1. Start with Requirement Intake.
+2. Continue to SA Analysis.
+3. Continue to DB / Data Impact Analysis when relevant.
+4. Produce implementation plan and expected changes.
+5. Stop at the SA / DB to Development gate and ask for confirmation before implementation.
+6. After explicit confirmation, continue to implementation.
+7. After implementation, stop at Development to Test gate.
+8. Continue to test, code review, DB review, security review, release planning, UAT support, and handover only when the previous gate is satisfied.
+9. If there is a blocking issue, pause the pipeline and report what must be resolved.
+10. If requirements are unclear, return to the user or SA Agent instead of guessing.
+11. If DB impact is unclear, return to DB Agent or user confirmation instead of creating unsafe SQL.
+12. If security risk is high, stop before release.
+
+## Required output behavior
+
+At each stage, report:
+
+- Current stage
+- Agent perspective used
+- Skill capability used, if any
+- Inputs used
+- Output produced
+- Gate status
+- Next required user decision
+
+When file modifications are required, provide a change proposal with risk, file list, summary, validation, and rollback before applying any change.
+"""
