@@ -34,6 +34,58 @@
       "args": ["./packages/flowchart-mcp/index.js"],
       "cwd": ".",
       "trust": false
+    },
+    "git": {
+      "command": "node",
+      "args": ["./packages/git-mcp/index.js"],
+      "cwd": ".",
+      "env": {
+        "GIT_MCP_ROOTS": "$GIT_MCP_ROOTS",
+        "FILE_MCP_ROOTS": "$FILE_MCP_ROOTS"
+      },
+      "trust": false
+    },
+    "dbMetadata": {
+      "command": "node",
+      "args": ["./packages/db-metadata-mcp/index.js"],
+      "cwd": ".",
+      "env": {
+        "DB_METADATA_MSSQL_CONN": "$DB_METADATA_MSSQL_CONN",
+        "MSSQL_CONN": "$MSSQL_CONN"
+      },
+      "trust": false
+    },
+    "testRunner": {
+      "command": "node",
+      "args": ["./packages/test-runner-mcp/index.js"],
+      "cwd": ".",
+      "env": {
+        "TEST_RUNNER_ROOTS": "$TEST_RUNNER_ROOTS",
+        "TEST_RUNNER_COMMANDS": "$TEST_RUNNER_COMMANDS",
+        "FILE_MCP_ROOTS": "$FILE_MCP_ROOTS"
+      },
+      "trust": false
+    },
+    "staticAnalysis": {
+      "command": "node",
+      "args": ["./packages/static-analysis-mcp/index.js"],
+      "cwd": ".",
+      "env": {
+        "STATIC_ANALYSIS_ROOTS": "$STATIC_ANALYSIS_ROOTS",
+        "STATIC_ANALYSIS_COMMANDS": "$STATIC_ANALYSIS_COMMANDS",
+        "FILE_MCP_ROOTS": "$FILE_MCP_ROOTS"
+      },
+      "trust": false
+    },
+    "secretScan": {
+      "command": "node",
+      "args": ["./packages/secret-scan-mcp/index.js"],
+      "cwd": ".",
+      "env": {
+        "SECRET_SCAN_ROOTS": "$SECRET_SCAN_ROOTS",
+        "FILE_MCP_ROOTS": "$FILE_MCP_ROOTS"
+      },
+      "trust": false
     }
   },
   "security": {
