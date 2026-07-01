@@ -21,7 +21,7 @@ npm install
 Copy-Item .gemini/.env.example .gemini/.env
 ```
 
-請依實際環境填入必要變數，例如 Redmine、DB metadata、file roots 等。
+請依實際環境填入必要變數，例如 Redmine、DB metadata、file roots、test runner commands、static analysis commands、secret scan roots 等。
 
 ## 3. 啟動 Gemini CLI
 
@@ -98,6 +98,20 @@ release-ops
 incident-rca
 ```
 
+### MCP Servers
+
+```text
+redmine
+localFiles
+devDocs
+flowchart
+git
+dbMetadata
+testRunner
+staticAnalysis
+secretScan
+```
+
 ## 6. 加入目標專案
 
 如果 `skills-hub` 與實際要開發的專案不同，請加入目標專案：
@@ -107,9 +121,41 @@ incident-rca
 /directory show
 ```
 
-## 7. 建議啟動方式
+並確認 `.gemini/.env` 中至少設定下列 allow roots：
 
-### 7.1 先產生計畫，不修改檔案
+```text
+FILE_MCP_ROOTS="D:\Workspace\TargetProject"
+GIT_MCP_ROOTS="D:\Workspace\TargetProject"
+TEST_RUNNER_ROOTS="D:\Workspace\TargetProject"
+STATIC_ANALYSIS_ROOTS="D:\Workspace\TargetProject"
+SECRET_SCAN_ROOTS="D:\Workspace\TargetProject"
+```
+
+## 7. MCP Smoke Test
+
+可用 npm script 單獨啟動 MCP Server：
+
+```bash
+npm run dev:git
+npm run dev:dbmetadata
+npm run dev:testrunner
+npm run dev:static
+npm run dev:secrets
+```
+
+也可以用 MCP Inspector 做 tool-level 測試：
+
+```bash
+npx @modelcontextprotocol/inspector -- node ./packages/git-mcp/index.js
+npx @modelcontextprotocol/inspector -- node ./packages/db-metadata-mcp/index.js
+npx @modelcontextprotocol/inspector -- node ./packages/test-runner-mcp/index.js
+npx @modelcontextprotocol/inspector -- node ./packages/static-analysis-mcp/index.js
+npx @modelcontextprotocol/inspector -- node ./packages/secret-scan-mcp/index.js
+```
+
+## 8. 建議啟動方式
+
+### 8.1 先產生計畫，不修改檔案
 
 ```text
 /sdlc:plan Redmine #1234，目標專案 D:\Workspace\TargetProject。請先完成需求釐清、SA 分析、DB / Data 影響分析與開發計畫。先不要修改任何檔案。
@@ -127,7 +173,7 @@ incident-rca
 * Risks and Rollback Direction
 * Gate Decision Required
 
-### 7.2 確認後進入開發
+### 8.2 確認後進入開發
 
 ```text
 /sdlc:implement 使用剛才確認的 plan 開始實作。
@@ -135,19 +181,19 @@ incident-rca
 
 若尚未取得明確 approval，Gemini 應停止並要求確認。
 
-### 7.3 執行 Review
+### 8.3 執行 Review
 
 ```text
 /sdlc:review 請針對目前變更執行測試規劃、DB Review、Code Review 與 Security Review。
 ```
 
-### 7.4 產生 Release Package
+### 8.4 產生 Release Package
 
 ```text
 /sdlc:release 請根據本次變更產生部署步驟、回滾方式、UAT checklist 與維運交接內容。
 ```
 
-### 7.5 一鍵入口，但每個 Gate 停下
+### 8.5 一鍵入口，但每個 Gate 停下
 
 ```text
 /sdlc:run Redmine #1234，目標專案 D:\Workspace\TargetProject。
@@ -155,7 +201,7 @@ incident-rca
 
 `/sdlc:run` 應先進入 plan，並在每個 gate 停下要求確認，不應無人監督一路修改到 release。
 
-## 8. 常見問題
+## 9. 常見問題
 
 ### `/commands list` 看不到 `/sdlc:*`
 
@@ -182,6 +228,15 @@ incident-rca
 * `SKILL.md` 第一行是 `---`
 * YAML frontmatter 至少包含 `name` 與 `description`
 * 已執行 `/skills reload`
+
+### `/mcp` 看不到 SDLC MCP servers
+
+請確認：
+
+* `.gemini/settings.json` 中存在 `git`、`dbMetadata`、`testRunner`、`staticAnalysis`、`secretScan`
+* 已執行 `/mcp reload`
+* 已執行 `npm install`
+* `.gemini/.env` 中的 allow roots 與 connection string 設定正確
 
 ### Pipeline 沒有繼續往下跑
 
