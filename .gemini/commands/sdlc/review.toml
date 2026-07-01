@@ -1,0 +1,51 @@
+description = "Review an SDLC implementation through test, DB review, code review, and security review."
+prompt = """
+# SDLC Review Command
+
+You are executing `/sdlc:review`.
+
+User request:
+{{args}}
+
+## Operating mode
+
+Run review and validation workflow. Prefer read-only inspection. Do not modify files unless the user explicitly asks for a fix and approves a change proposal.
+
+## References
+
+- Root governance: `GEMINI.md`
+- SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
+- Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
+
+## Required flow
+
+1. Identify the current implementation scope, modified files, DB changes, and test evidence.
+2. Perform test review and propose or run tests only when allowed.
+3. Perform DB Review when SQL, schema, migration, data persistence, reports, imports, exports, or integration data are involved.
+4. Perform Code Review focusing on correctness, maintainability, compatibility, and regression risk.
+5. Perform Security Review focusing on secrets, injection, authorization, configuration, dependencies, and sensitive data exposure.
+6. Classify findings as Blocking, High, Medium, Low, or Suggestion.
+7. Stop before release if any blocking or high-risk unresolved issue exists.
+
+## Required output format
+
+# SDLC Review Report
+
+## 1. Review Scope
+
+## 2. Test Report
+
+## 3. DB Review
+
+## 4. Code Review
+
+## 5. Security Review
+
+## 6. Blocking Issues
+
+## 7. Non-blocking Issues
+
+## 8. Gate Decision
+
+State whether the pipeline may proceed to `/sdlc:release`.
+"""
