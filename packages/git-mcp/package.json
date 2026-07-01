@@ -1,0 +1,13 @@
+{
+  "name": "@skills-hub/git-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "git-mcp": "./index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  }
+}
