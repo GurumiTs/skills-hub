@@ -1,0 +1,51 @@
+description = "Generate release, rollback, UAT, and handover package for approved SDLC changes."
+prompt = """
+# SDLC Release Command
+
+You are executing `/sdlc:release`.
+
+User request:
+{{args}}
+
+## Operating mode
+
+Generate release planning artifacts. Do not deploy, run production commands, modify production data, or execute destructive actions. If a physical document must be written, first provide a change proposal and wait for explicit approval.
+
+## References
+
+- Root governance: `GEMINI.md`
+- SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
+- Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
+
+## Required flow
+
+1. Confirm the change scope, review result, DB review result, security review result, and testing status.
+2. Refuse to proceed if blocking or high-risk unresolved issues exist.
+3. Produce deployment steps.
+4. Produce post-deployment validation steps.
+5. Produce rollback plan, including file rollback and DB rollback when applicable.
+6. Produce UAT checklist.
+7. Produce handover / runbook notes.
+
+## Required output format
+
+# Release Package
+
+## 1. Change Summary
+
+## 2. Preconditions
+
+## 3. Deployment Steps
+
+## 4. DB Deployment Steps
+
+## 5. Post-deployment Validation
+
+## 6. Rollback Plan
+
+## 7. UAT Checklist
+
+## 8. Handover / Runbook
+
+## 9. Open Risks
+"""
