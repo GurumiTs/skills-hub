@@ -45,6 +45,16 @@ feature/sdlc_pipeline
 | Release Ops | `.gemini/skills/release-ops/SKILL.md` |
 | Incident RCA | `.gemini/skills/incident-rca/SKILL.md` |
 
+## Implemented MCP Servers
+
+| MCP Server | File | Purpose | Safety Model |
+|---|---|---|---|
+| Git MCP | `packages/git-mcp/index.js` | Read-only git status, diff, changed files, log | Allow roots via `GIT_MCP_ROOTS` / `FILE_MCP_ROOTS` |
+| DB Metadata MCP | `packages/db-metadata-mcp/index.js` | SQL Server metadata: tables, columns, indexes, routines | Metadata-only queries, requires read-only connection |
+| Test Runner MCP | `packages/test-runner-mcp/index.js` | Run allowlisted test commands | Allow roots + allowlisted command arrays |
+| Static Analysis MCP | `packages/static-analysis-mcp/index.js` | Detect project stack and run allowlisted lint/build commands | Allow roots + allowlisted command arrays |
+| Secret Scan MCP | `packages/secret-scan-mcp/index.js` | Local read-only secret pattern scanning with masked findings | Allow roots, masked output, excludes common generated folders |
+
 ## Implemented Playbooks
 
 | Playbook | File |
@@ -60,14 +70,24 @@ feature/sdlc_pipeline
 | Release Index | `docs/playbooks/release/README.md` |
 | Incident Index | `docs/playbooks/incident/README.md` |
 
+## Updated Runtime Files
+
+| File | Change |
+|---|---|
+| `package.json` | Added npm dev scripts for SDLC MCP servers |
+| `.gemini/settings.json` | Registered Git, DB Metadata, Test Runner, Static Analysis, and Secret Scan MCP servers |
+| `.gemini/.env.example` | Added environment variable examples for SDLC MCP servers |
+
 ## Known Limitations
 
 | Limitation | Notes |
 |---|---|
-| MCP Phase 3 not yet implemented | Git MCP, DB Metadata MCP, Test Runner MCP, Static Analysis MCP, Secret Scan MCP are still future work |
 | Pipeline is command-driven, not deterministic engine | `/sdlc:*` commands guide Gemini CLI through the workflow but do not replace user gate decisions |
-| Physical file changes still require approval | Commands and agents must follow `GEMINI.md` Change Control |
-| README current feature table may need follow-up sync | This status file records the feature branch implementation state |
+| Physical file changes still require approval | Commands, agents, and MCP tools must follow `GEMINI.md` Change Control |
+| DB Metadata MCP currently targets SQL Server | Oracle / BigQuery support can be added later as separate metadata adapters or MCP tools |
+| Test / static analysis commands are allowlist-based | Users must configure project-appropriate commands in `.gemini/.env` |
+| Secret scan is heuristic | It helps detect common patterns but does not replace dedicated enterprise secret scanning |
+| Content quality still needs tuning | User has confirmed discovery works; detailed prompt compliance review remains future refinement |
 
 ## Validation Checklist
 
@@ -94,4 +114,35 @@ Expected commands:
 /sdlc:implement
 /sdlc:review
 /sdlc:release
+```
+
+Expected MCP servers:
+
+```text
+git
+dbMetadata
+testRunner
+staticAnalysis
+secretScan
+```
+
+## Local MCP Smoke Test Commands
+
+```bash
+npm install
+npm run dev:git
+npm run dev:dbmetadata
+npm run dev:testrunner
+npm run dev:static
+npm run dev:secrets
+```
+
+For interactive tool-level testing, use MCP Inspector. Example:
+
+```bash
+npx @modelcontextprotocol/inspector -- node ./packages/git-mcp/index.js
+npx @modelcontextprotocol/inspector -- node ./packages/db-metadata-mcp/index.js
+npx @modelcontextprotocol/inspector -- node ./packages/test-runner-mcp/index.js
+npx @modelcontextprotocol/inspector -- node ./packages/static-analysis-mcp/index.js
+npx @modelcontextprotocol/inspector -- node ./packages/secret-scan-mcp/index.js
 ```
