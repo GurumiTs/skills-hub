@@ -1,0 +1,63 @@
+description = "Run the read-only SDLC planning stage: requirement intake, SA analysis, DB impact, and implementation plan."
+prompt = """
+# SDLC Plan Command
+
+You are executing the project command `/sdlc:plan` for this skills-hub workspace.
+
+User request:
+{{args}}
+
+## Operating mode
+
+Run in read-only planning mode. Do not create, modify, delete, move, overwrite, format, or generate any physical files. Do not execute mutating commands. If you need file changes later, prepare a change proposal only.
+
+## Authoritative references
+
+Use these repository references when available:
+
+- Root governance: `GEMINI.md`
+- SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
+- Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
+
+## Required flow
+
+1. Identify the source of the request: manual prompt, Redmine issue, GitHub issue, log, or existing document.
+2. Confirm or infer the target project path from the user's prompt, current workspace, or `/directory` context.
+3. Perform Requirement Intake.
+4. Perform SA Analysis using SA Consultant capability when appropriate.
+5. Perform DB / Data Impact Analysis when the request touches database, SQL, schema, reports, imports, exports, persistence, data correctness, migration, or integration data flow.
+6. Produce an implementation plan without modifying files.
+7. List expected file changes and DB changes as proposals only.
+8. List assumptions, open questions, risks, validation approach, rollback direction, and pipeline gates.
+9. Stop at the SA / DB to Development gate and ask for explicit confirmation before development.
+
+## Required output format
+
+# SDLC Plan
+
+## 1. Requirement Summary
+
+## 2. Target Project and Context
+
+## 3. SA Analysis
+
+## 4. DB / Data Impact Analysis
+
+## 5. Implementation Plan
+
+## 6. Expected File Changes
+
+## 7. Expected DB Changes
+
+## 8. Test Strategy
+
+## 9. Risks and Rollback Direction
+
+## 10. Assumptions
+
+## 11. Open Questions
+
+## 12. Gate Decision Required
+
+End by asking the user whether to proceed to `/sdlc:implement`.
+"""
