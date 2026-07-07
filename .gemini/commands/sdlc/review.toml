@@ -1,51 +1,237 @@
-description = "Review an SDLC implementation through test, DB review, code review, and security review."
+description = "執行 SDLC Review 階段：測試檢查、DB Review、Code Review、Security Review 與 Gate 判斷。"
 prompt = """
-# SDLC Review Command
+# /sdlc:review - SDLC Review 階段
 
-You are executing `/sdlc:review`.
+你正在執行 skills-hub workspace 的 `/sdlc:review` command。
 
-User request:
+使用者需求：
 {{args}}
 
-## Operating mode
+## 1. 上層規則
 
-Run review and validation workflow. Prefer read-only inspection. Do not modify files unless the user explicitly asks for a fix and approves a change proposal.
+本 command 不得覆蓋或繞過以下上層規則：
 
-## References
+- 根目錄 `GEMINI.md` 的 Change Control、Secrets 保護、安全限制、檔案修改前確認流程與回滾要求。
+- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate 與 Blocking Rule。
+- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State 格式。
+
+若本 command 與 `GEMINI.md` 發生衝突，必須優先遵守 `GEMINI.md`。
+
+## 2. 執行模式
+
+本 command 以 read-only review 為主。
+
+允許：
+
+- 讀取 implementation summary、modified files、git diff、測試結果、DB 變更、設定檔與相關文件。
+- 執行不會造成檔案或資料異動的檢查。
+- 提出 blocking / non-blocking findings、修正建議、測試建議、release gate 判斷。
+
+禁止：
+
+- 未經使用者明確同意前修改檔案、套用修正、格式化程式、更新 package 或產生實體文件。
+- 執行 destructive command、DB mutation、production command 或部署。
+- 將未執行測試標示為 pass。
+- 在 high-risk 或 blocking issue 未解決時建議 release。
+- 在回覆中完整輸出 secrets、connection string、token、password、cookie 或私人憑證。
+
+## 3. 語言與術語
+
+輸出以繁體中文為主。
+
+以下工程術語可保留英文：Review Scope、Test Report、DB Review、Code Review、Security Review、Blocking Issue、High Risk、Medium、Low、Suggestion、Gate Decision、Not Tested、Not Applicable、Rollback。
+
+## 4. 權威參考
+
+執行時應優先參考：
 
 - Root governance: `GEMINI.md`
 - SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
 - Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
 
-## Required flow
+## 5. Agent / Skill 使用原則
 
-1. Identify the current implementation scope, modified files, DB changes, and test evidence.
-2. Perform test review and propose or run tests only when allowed.
-3. Perform DB Review when SQL, schema, migration, data persistence, reports, imports, exports, or integration data are involved.
-4. Perform Code Review focusing on correctness, maintainability, compatibility, and regression risk.
-5. Perform Security Review focusing on secrets, injection, authorization, configuration, dependencies, and sensitive data exposure.
-6. Classify findings as Blocking, High, Medium, Low, or Suggestion.
-7. Stop before release if any blocking or high-risk unresolved issue exists.
+本 command 應依序套用以下 Agent 視角與 Skill 能力：
 
-## Required output format
+| Review 區塊 | Agent 視角 | Skill 能力 | 必要性 |
+|---|---|---|---|
+| Test Review | Test Agent | `test-engineer` | 必須執行，至少判斷測試證據是否足夠 |
+| DB Review | DB Agent | `db-engineering` | 只要涉及 DB / SQL / Data Flow 就必須執行 |
+| Code Review | Review Agent | `code-reviewer` | 必須執行 |
+| Security Review | Security Agent | `security-reviewer` | 必須執行 |
+| Release Gate 判斷 | Workflow Orchestrator | 不直接實作 Skill | 必須執行 |
+
+## 6. Review Scope 判斷
+
+開始 review 前，必須先整理：
+
+1. Approved Scope。
+2. Modified Files。
+3. DB Changes。
+4. Test Evidence。
+5. Self-test Instructions。
+6. Known Risks。
+7. 是否有未完成或超出 scope 的變更。
+
+若無法判斷 review scope，必須將 Gate 狀態標示為 `Blocked`，不得進入 release。
+
+## 7. DB Review 觸發條件
+
+只要本次變更涉及以下任一項，就必須執行 DB Review：
+
+- table、column、index、view、stored procedure、function、trigger。
+- SQL、query、report、filter、sort、pagination、aggregation。
+- import / export、資料同步、批次、排程、資料轉換。
+- migration、rollback SQL、資料修補、歷史資料。
+- 權限資料、角色資料、設定資料、流程狀態資料。
+- API 或系統整合中的資料流。
+
+若變更看似不涉及 DB，也要在輸出中明確寫出 `DB Review: Not Applicable` 與理由。
+
+## 8. Finding 分級規則
+
+Findings 必須使用以下分級：
+
+| 等級 | 定義 | Gate 行為 |
+|---|---|---|
+| Blocking | 會造成需求不符、資料錯誤、資安重大風險、無法 rollback、測試阻斷或正式環境高風險 | 必須停止，不得 release |
+| High | 可能造成重大缺陷、資料正確性風險、權限風險、注入風險或部署高風險 | 原則上不得 release，需使用者明確處理或接受風險 |
+| Medium | 有明確改善需求，但可評估是否延後 | 可進入 release 但需列入風險 |
+| Low | 小型可維護性、命名、文件或非關鍵問題 | 可進入 release |
+| Suggestion | 建議優化，不影響本次 Gate | 可進入 release |
+
+## 9. 必要流程
+
+1. 確認 review scope 與輸入資料是否足夠。
+2. 執行 Test Review：檢查測試案例、測試資料、執行結果與 not-tested 項目。
+3. 判斷是否需要 DB Review；若需要，檢查 SQL、migration、data validation、transaction、locking、performance、rollback。
+4. 執行 Code Review：檢查正確性、需求符合度、可維護性、相容性、例外處理、專案風格與 regression risk。
+5. 執行 Security Review：檢查 secrets、敏感資料、injection、auth / authorization、configuration、dependency、deployment risk。
+6. 彙整 Blocking / High / Medium / Low / Suggestion findings。
+7. 根據 findings 判斷是否可進入 `/sdlc:release`。
+8. 停在 `Security → Release` Gate，要求使用者確認下一步。
+
+## 10. 必要輸出格式
 
 # SDLC Review Report
 
 ## 1. Review Scope
 
-## 2. Test Report
+## 2. Input Evidence
 
-## 3. DB Review
+| Item | Provided / Missing | Notes |
+|---|---|---|
+| Approved Scope | | |
+| Modified Files | | |
+| DB Changes | | |
+| Test Evidence | | |
+| Self-test Instructions | | |
+| Workflow State | | |
 
-## 4. Code Review
+## 3. Test Review
 
-## 5. Security Review
+### 3.1 Test Scope
 
-## 6. Blocking Issues
+### 3.2 Test Evidence
 
-## 7. Non-blocking Issues
+### 3.3 Not Tested Items
 
-## 8. Gate Decision
+### 3.4 Test Review Decision
 
-State whether the pipeline may proceed to `/sdlc:release`.
+Decision: Pass / Blocked / Not Tested / Needs More Evidence
+
+## 4. DB Review
+
+### 4.1 Applicability
+
+DB Review: Required / Not Applicable / Blocked
+
+### 4.2 Affected DB Objects
+
+### 4.3 Data Correctness
+
+### 4.4 Transaction / Locking / Performance
+
+### 4.5 Migration and Rollback
+
+### 4.6 DB Review Decision
+
+Decision: Pass / Blocked / Needs More Evidence / Not Applicable
+
+## 5. Code Review
+
+### 5.1 Correctness
+
+### 5.2 Maintainability
+
+### 5.3 Compatibility
+
+### 5.4 Error Handling
+
+### 5.5 Regression Risk
+
+### 5.6 Code Review Decision
+
+Decision: Pass / Blocked / Needs More Evidence
+
+## 6. Security Review
+
+### 6.1 Secrets / Sensitive Data
+
+### 6.2 Injection Risks
+
+### 6.3 Auth / Authorization Risks
+
+### 6.4 Configuration / Dependency Risks
+
+### 6.5 Security Review Decision
+
+Decision: Pass / Blocked / High Risk / Needs More Evidence
+
+## 7. Findings
+
+| Severity | Area | Finding | Impact | Recommendation | Gate Impact |
+|---|---|---|---|---|---|
+
+## 8. Blocking Issues
+
+## 9. Non-blocking Issues
+
+## 10. Workflow State Snapshot
+
+```markdown
+# SDLC Workflow State Snapshot
+
+| Item | Value |
+|---|---|
+| Current Stage | Review |
+| Gate | Security → Release |
+| Gate Status | Pending / Ready for Approval / Blocked |
+| Required Next Command | /sdlc:release |
+
+## Stage Status
+
+| Stage | Status | Owner Agent | Notes |
+|---|---|---|---|
+| Test Review | Done / Blocked / Needs Evidence | Test Agent | |
+| DB Review | Done / Skipped / Blocked / Needs Evidence | DB Agent | |
+| Code Review | Done / Blocked / Needs Evidence | Review Agent | |
+| Security Review | Done / Blocked / Needs Evidence | Security Agent | |
+
+## Gate Decision Required
+
+- Gate: Security → Release
+- Status:
+- Required user decision:
+```
+
+## 11. Gate Decision
+
+必須明確說明：
+
+- 是否可進入 `/sdlc:release`。
+- 若不可進入，阻塞原因是什麼。
+- 若可進入，仍有哪些 medium / low / suggestion 需要追蹤。
+
+最後若 Gate 可進入下一階段，詢問使用者是否同意進入 `/sdlc:release`。
 """
