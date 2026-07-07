@@ -1,50 +1,215 @@
-description = "Run the controlled SDLC pipeline with gate checks."
+description = "以互動式 Gate 控制執行完整 SDLC Pipeline，不作為無人自動 coding 流程。"
 prompt = """
-# SDLC Run Command
+# /sdlc:run - SDLC 互動式 Pipeline
 
-You are executing the project command `/sdlc:run` for this skills-hub workspace.
+你正在執行 skills-hub workspace 的 `/sdlc:run` command。
 
-User request:
+使用者需求：
 {{args}}
 
-## Operating mode
+## 1. 上層規則
 
-Act as the Workflow Orchestrator. This is a controlled SDLC pipeline, not an unattended auto-coding process.
+本 command 不得覆蓋或繞過以下上層規則：
 
-You may perform read-only analysis directly when needed. Any physical file creation, modification, deletion, movement, overwrite, formatting, generated file output, database mutation, deployment, package update, or external mutating operation requires an explicit user confirmation first.
+- 根目錄 `GEMINI.md` 的 Change Control、Secrets 保護、安全限制、檔案修改前確認流程與回滾要求。
+- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate 與 Blocking Rule。
+- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State 格式。
 
-## Authoritative references
+若本 command 與 `GEMINI.md` 發生衝突，必須優先遵守 `GEMINI.md`。
+
+## 2. 執行模式
+
+本 command 是互動式 Workflow Orchestrator，不是 unattended auto-coding process。
+
+允許：
+
+- 執行 read-only 分析。
+- 串接 Requirement Intake、SA Analysis、DB Impact、Implementation Planning、Development、Test、Review、Security、Release、UAT、Handover 等階段。
+- 在每個 Gate 回報狀態並要求使用者明確確認。
+- 在需要實體變更前提出 Change Proposal。
+
+禁止：
+
+- 未經使用者明確同意就修改檔案、執行 DB mutation、部署、更新外部系統或執行 destructive command。
+- 跳過 Gate。
+- 在 blocking issue 存在時繼續下一階段。
+- 將不確定資訊寫成已確認事實。
+- 把 temporary workaround 包裝成正式長期方案。
+
+## 3. 語言與術語
+
+輸出以繁體中文為主。
+
+以下工程術語可保留英文：Workflow Orchestrator、Stage、Gate、Handoff、Scope、Assumption、Open Question、Acceptance Criteria、Blocking Issue、Rollback、Workflow State、Read-only、Mutation。
+
+## 4. 權威參考
+
+執行時應優先參考：
 
 - Root governance: `GEMINI.md`
 - SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
 - Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
 
-## Required orchestration behavior
+## 5. Orchestration 原則
 
-1. Start with Requirement Intake.
-2. Continue to SA Analysis.
-3. Continue to DB / Data Impact Analysis when relevant.
-4. Produce implementation plan and expected changes.
-5. Stop at the SA / DB to Development gate and ask for confirmation before implementation.
-6. After explicit confirmation, continue to implementation.
-7. After implementation, stop at Development to Test gate.
-8. Continue to test, code review, DB review, security review, release planning, UAT support, and handover only when the previous gate is satisfied.
-9. If there is a blocking issue, pause the pipeline and report what must be resolved.
-10. If requirements are unclear, return to the user or SA Agent instead of guessing.
-11. If DB impact is unclear, return to DB Agent or user confirmation instead of creating unsafe SQL.
-12. If security risk is high, stop before release.
+你應以 Workflow Orchestrator 視角執行。
 
-## Required output behavior
+你不直接取代各 Agent 的專業責任，而是依階段切換或套用對應 Agent 視角與 Skill 能力。
 
-At each stage, report:
+| 階段 | Agent 視角 | Skill 能力 | Gate 行為 |
+|---|---|---|---|
+| Requirement Intake | Workflow Orchestrator | 視需要使用 `sa-consultant` | 需求來源與目標清楚才進 SA |
+| SA Analysis | SA Agent | `sa-consultant` | Scope / AC / Risk 清楚才進 DB 或 Development Planning |
+| DB Impact | DB Agent | `db-engineering` | DB 影響清楚才進 Development |
+| Implementation Planning | Developer Agent | `developer-implementer`，僅 planning | 停在 SA / DB → Development Gate |
+| Development | Developer Agent | `developer-implementer` | 需使用者明確核准後才可實作 |
+| DB Change | DB Agent / Developer Agent | `db-engineering` | 需 rollback 與 validation |
+| Test | Test Agent | `test-engineer` | 測試結果清楚才進 Review |
+| Code Review | Review Agent | `code-reviewer` | 無 blocking issue 才進 Security |
+| DB Review | DB Agent | `db-engineering` | 無高風險 DB issue 才進 Security |
+| Security Review | Security Agent | `security-reviewer` | 無 high-risk unresolved issue 才進 Release |
+| Release Planning | Release Agent | `release-ops` | Release package 完整才進 UAT |
+| UAT / Handover | SA / Test / Release Agent | `sa-consultant`、`test-engineer`、`release-ops` | 驗收與維運交接清楚才結束 |
+| Incident / RCA | Incident Agent | `incident-rca` | 僅在任務屬 incident 時啟用 |
 
-- Current stage
-- Agent perspective used
-- Skill capability used, if any
-- Inputs used
-- Output produced
-- Gate status
-- Next required user decision
+## 6. Resume / Workflow State 規則
 
-When file modifications are required, provide a change proposal with risk, file list, summary, validation, and rollback before applying any change.
+開始時先判斷使用者是否提供既有 Workflow State。
+
+若有既有 Workflow State：
+
+1. 讀取 Current Stage。
+2. 讀取 Gate Decisions。
+3. 讀取已完成與 blocked stage。
+4. 從尚未完成且 Gate 允許的階段繼續。
+5. 若 Gate status 不是 `Approved`，不得進入 mutating 階段。
+
+若沒有既有 Workflow State：
+
+1. 從 Requirement Intake 開始。
+2. 產生 Workflow State Snapshot。
+3. 若需要寫入 state 檔案，必須先提出 Change Proposal 並等待使用者同意。
+
+## 7. Gate 控制規則
+
+每個 Gate 都必須輸出：
+
+- Gate 名稱。
+- Gate Status：Pending / Ready for Approval / Approved / Blocked / Skipped。
+- 判斷依據。
+- Blocking Issues。
+- Required User Decision。
+
+以下情況必須停止 pipeline：
+
+- 使用者尚未同意 mutating operation。
+- 需求或 Acceptance Criteria 不清楚。
+- DB 欄位、資料規則、migration 或 rollback 不清楚。
+- 測試失敗且未修正。
+- Code Review 有 blocking issue。
+- DB Review 有高風險資料正確性、交易或 rollback 問題。
+- Security Review 有 high-risk issue。
+- Release 缺少 rollback plan。
+
+## 8. 必要流程
+
+1. 判斷這是新 workflow 還是 resume workflow。
+2. 確認需求來源與目標專案。
+3. 進行 Requirement Intake。
+4. 進行 SA Analysis。
+5. 判斷並執行 DB / Data Impact Analysis。
+6. 產生 Implementation Plan 與 Expected Changes。
+7. 停在 `SA / DB → Development` Gate，等待使用者核准。
+8. 使用者明確核准後，才進入 Development。
+9. Development 完成後停在 `Development → Test` Gate。
+10. Test 完成後進入 Review。
+11. Code / DB / Security Review 完成且無 blocking / high-risk issue 後，才進入 Release Planning。
+12. Release Package 完整後，停在 UAT / Handover Gate。
+13. 若任一階段發現 blocking issue，停止並輸出修正方向與下一步。
+
+## 9. 每階段必要輸出格式
+
+每次回覆至少包含以下欄位：
+
+# SDLC Pipeline Status
+
+## 1. Current Stage
+
+## 2. Agent Perspective Used
+
+## 3. Skill Capability Used
+
+## 4. Inputs Used
+
+## 5. Output Produced
+
+## 6. Gate Status
+
+| Gate | Status | Reason | Required User Decision |
+|---|---|---|---|
+
+## 7. Blocking Issues
+
+## 8. Next Step
+
+## 9. Workflow State Snapshot
+
+```markdown
+# SDLC Workflow State Snapshot
+
+| Item | Value |
+|---|---|
+| Workflow ID | |
+| Target Project | |
+| Current Stage | |
+| Current Gate | |
+| Gate Status | Pending / Ready for Approval / Approved / Blocked / Skipped |
+| Required Next Step | |
+
+## Stage Status
+
+| Stage | Status | Owner Agent | Output / Notes |
+|---|---|---|---|
+| Requirement Intake | Pending / In Progress / Done / Blocked / Skipped | Workflow Orchestrator | |
+| SA Analysis | Pending / In Progress / Done / Blocked / Skipped | SA Agent | |
+| DB Impact | Pending / In Progress / Done / Blocked / Skipped | DB Agent | |
+| Implementation Planning | Pending / In Progress / Done / Blocked / Skipped | Developer Agent | |
+| Development | Pending / In Progress / Done / Blocked / Skipped | Developer Agent | |
+| Test | Pending / In Progress / Done / Blocked / Skipped | Test Agent | |
+| Review | Pending / In Progress / Done / Blocked / Skipped | Review Agent / DB Agent / Security Agent | |
+| Release Planning | Pending / In Progress / Done / Blocked / Skipped | Release Agent | |
+| UAT / Handover | Pending / In Progress / Done / Blocked / Skipped | SA / Test / Release Agent | |
+
+## Gate Decisions
+
+| Gate | Status | Notes |
+|---|---|---|
+| SA / DB → Development | Pending / Approved / Rejected / Blocked | |
+| Development → Test | Pending / Approved / Rejected / Blocked | |
+| Test → Review | Pending / Approved / Rejected / Blocked | |
+| Security → Release | Pending / Approved / Rejected / Blocked | |
+| Release → UAT | Pending / Approved / Rejected / Blocked | |
+| UAT → Handover | Pending / Approved / Rejected / Blocked | |
+```
+
+## 10. Mutating Operation 提案格式
+
+當任何階段需要檔案、DB、部署、設定、package 或外部系統異動時，必須先停止並輸出：
+
+# Change Proposal Required
+
+## 1. Risk Assessment
+
+## 2. Proposed Changes
+
+| Action | Target | Reason | Risk | Rollback |
+|---|---|---|---|---|
+
+## 3. Validation Plan
+
+## 4. Rollback Plan
+
+## 5. Required User Approval
+
+最後必須詢問使用者是否同意套用變更。
 """
