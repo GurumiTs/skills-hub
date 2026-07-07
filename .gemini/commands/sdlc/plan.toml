@@ -1,63 +1,198 @@
-description = "Run the read-only SDLC planning stage: requirement intake, SA analysis, DB impact, and implementation plan."
+description = "執行唯讀 SDLC 規劃階段：需求輸入、SA 分析、DB 影響判斷、實作計畫與 Gate 決策。"
 prompt = """
-# SDLC Plan Command
+# /sdlc:plan - SDLC 規劃階段
 
-You are executing the project command `/sdlc:plan` for this skills-hub workspace.
+你正在執行 skills-hub workspace 的 `/sdlc:plan` command。
 
-User request:
+使用者需求：
 {{args}}
 
-## Operating mode
+## 1. 上層規則
 
-Run in read-only planning mode. Do not create, modify, delete, move, overwrite, format, or generate any physical files. Do not execute mutating commands. If you need file changes later, prepare a change proposal only.
+本 command 不得覆蓋或繞過以下上層規則：
 
-## Authoritative references
+- 根目錄 `GEMINI.md` 的 Change Control、Secrets 保護、安全限制、檔案修改前確認流程與回滾要求。
+- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate 與 Blocking Rule。
+- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State 格式。
 
-Use these repository references when available:
+若本 command 與 `GEMINI.md` 發生衝突，必須優先遵守 `GEMINI.md`。
+
+## 2. 執行模式
+
+本 command 只能執行唯讀規劃。
+
+允許：
+
+- 讀取使用者明確指定或與任務直接相關的檔案、議題、文件、程式碼、設定或 metadata。
+- 產生分析、規劃、草稿、建議、預期異動清單、測試策略與 Gate 判斷。
+- 提出後續可能需要的檔案或 DB 變更提案。
+
+禁止：
+
+- 新增、修改、刪除、搬移、覆寫、格式化任何實體檔案。
+- 執行會造成檔案異動、DB 異動、部署、外部系統更新或 package 更新的指令。
+- 把未確認的需求、DB 規則、權限、部署方式或回滾方式寫成已確認事實。
+- 在 Gate 未通過前引導使用者直接進入實作。
+
+## 3. 語言與術語
+
+輸出以繁體中文為主。
+
+以下工程術語可保留英文，以維持精準且便於團隊溝通：Scope、In Scope、Out of Scope、Assumption、Open Question、Acceptance Criteria、Gate、Handoff、Rollback、Blocking Issue、Workflow State、Read-only、Mutation。
+
+## 4. 權威參考
+
+執行時應優先參考：
 
 - Root governance: `GEMINI.md`
 - SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
 - Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
 
-## Required flow
+## 5. Agent / Skill 使用原則
 
-1. Identify the source of the request: manual prompt, Redmine issue, GitHub issue, log, or existing document.
-2. Confirm or infer the target project path from the user's prompt, current workspace, or `/directory` context.
-3. Perform Requirement Intake.
-4. Perform SA Analysis using SA Consultant capability when appropriate.
-5. Perform DB / Data Impact Analysis when the request touches database, SQL, schema, reports, imports, exports, persistence, data correctness, migration, or integration data flow.
-6. Produce an implementation plan without modifying files.
-7. List expected file changes and DB changes as proposals only.
-8. List assumptions, open questions, risks, validation approach, rollback direction, and pipeline gates.
-9. Stop at the SA / DB to Development gate and ask for explicit confirmation before development.
+本 command 應以 Workflow Orchestrator 視角執行，但需要套用下列角色能力：
 
-## Required output format
+| 任務內容 | Agent 視角 | Skill 能力 |
+|---|---|---|
+| 需求輸入、階段判斷、Gate 判斷 | Workflow Orchestrator | 不直接實作 Skill，只負責協調 |
+| 需求釐清、SA 規格、影響分析 | SA Agent | `sa-consultant` |
+| DB / SQL / Schema / Data Flow 影響 | DB Agent | `db-engineering` |
+| 實作方式與預期檔案異動 | Developer Agent | `developer-implementer`，僅做計畫，不實作 |
+| 測試策略 | Test Agent | `test-engineer`，僅做測試規劃 |
+| 發布與回滾方向 | Release Agent | `release-ops`，僅做方向規劃 |
+
+## 6. DB / Data Impact 觸發條件
+
+只要需求涉及以下任一項，就必須執行 DB / Data Impact Analysis，不得跳過：
+
+- table、column、index、view、stored procedure、function、trigger。
+- SQL、report query、查詢條件、排序、分頁、統計、匯總。
+- import / export、資料同步、批次、排程、資料轉換。
+- migration、資料修補、預設值、歷史資料、資料正確性。
+- 權限資料、角色資料、設定資料、狀態機、審核流程資料。
+- API 或系統整合中的資料流變更。
+
+若不確定是否涉及 DB，必須標示為 `DB Impact: Unknown`，並列為 Open Question 或 Gate Blocker。
+
+## 7. 必要流程
+
+1. 判斷需求來源：Manual Prompt、Redmine、GitHub Issue、Log、既有文件、程式碼觀察或 Incident。
+2. 確認目標專案：使用者指定路徑、目前 workspace、`/directory` context，或明確指出目前資訊不足。
+3. 整理 Requirement Summary、背景、限制與使用者目標。
+4. 執行 SA Analysis，至少包含 In Scope、Out of Scope、Assumptions、Open Questions、Acceptance Criteria。
+5. 判斷 DB / Data Impact 是否需要執行，並說明判斷理由。
+6. 若需要 DB 分析，產出 DB Impact Summary、Affected Objects、Migration / Rollback Direction；若資訊不足，標示 blocker。
+7. 產出 Implementation Plan，但只能是 proposal，不得直接修改檔案。
+8. 列出 Expected File Changes 與 Expected DB Changes，並標示 `Proposal Only`。
+9. 產出 Test Strategy、Review Strategy、Release / Rollback Direction。
+10. 產出 Workflow State Snapshot，方便後續 `/sdlc:implement`、`/sdlc:review`、`/sdlc:release` 接續使用。
+11. 停在 `SA / DB → Development` Gate，要求使用者明確確認後才可進入 `/sdlc:implement`。
+
+## 8. Gate 判斷規則
+
+`SA / DB → Development` Gate 只有在以下條件都成立時才可標示為 `Ready for Approval`：
+
+- Requirement Summary 清楚。
+- In Scope / Out of Scope 已列出。
+- Acceptance Criteria 已列出，或已明確說明目前缺口。
+- DB / Data Impact 已判斷；若有 DB 影響，已完成初步分析。
+- Expected File Changes 與 Expected DB Changes 已列出為 proposal。
+- 主要風險、驗證方式與 rollback direction 已列出。
+- 無 blocking Open Question。
+
+若任一條件不成立，Gate 狀態必須是 `Blocked` 或 `Pending`，不得建議直接實作。
+
+## 9. 必要輸出格式
 
 # SDLC Plan
 
 ## 1. Requirement Summary
 
-## 2. Target Project and Context
+## 2. Request Source and Target Project
 
-## 3. SA Analysis
+## 3. Current Context and Confirmed Facts
 
-## 4. DB / Data Impact Analysis
+## 4. SA Analysis
 
-## 5. Implementation Plan
+### 4.1 In Scope
 
-## 6. Expected File Changes
+### 4.2 Out of Scope
 
-## 7. Expected DB Changes
+### 4.3 Assumptions
 
-## 8. Test Strategy
+### 4.4 Open Questions
 
-## 9. Risks and Rollback Direction
+### 4.5 Acceptance Criteria
 
-## 10. Assumptions
+## 5. DB / Data Impact Analysis
 
-## 11. Open Questions
+### 5.1 DB Impact Decision
 
-## 12. Gate Decision Required
+### 5.2 Affected Objects
 
-End by asking the user whether to proceed to `/sdlc:implement`.
+### 5.3 Migration Direction
+
+### 5.4 Rollback Direction
+
+### 5.5 DB Open Questions
+
+## 6. Implementation Plan
+
+## 7. Expected File Changes Proposal
+
+| Action | Path | Reason | Risk | Notes |
+|---|---|---|---|---|
+
+## 8. Expected DB Changes Proposal
+
+| Type | Object | Reason | Rollback Direction | Notes |
+|---|---|---|---|---|
+
+## 9. Test Strategy
+
+## 10. Review Strategy
+
+## 11. Release and Rollback Direction
+
+## 12. Risks
+
+| Severity | Risk | Impact | Mitigation | Owner |
+|---|---|---|---|---|
+
+## 13. Workflow State Snapshot
+
+```markdown
+# SDLC Workflow State Snapshot
+
+| Item | Value |
+|---|---|
+| Current Stage | Planning |
+| Target Project | |
+| Gate | SA / DB → Development |
+| Gate Status | Pending / Ready for Approval / Blocked |
+| Required Next Command | /sdlc:implement |
+
+## Stage Status
+
+| Stage | Status | Owner Agent | Notes |
+|---|---|---|---|
+| Requirement Intake | Done / Blocked | Workflow Orchestrator | |
+| SA Analysis | Done / Blocked | SA Agent | |
+| DB Impact | Done / Skipped / Blocked | DB Agent | |
+| Implementation Planning | Done / Blocked | Developer Agent | |
+
+## Gate Decision Required
+
+- Gate: SA / DB → Development
+- Status:
+- Required user decision:
+```
+
+## 14. Gate Decision Required
+
+最後必須明確詢問使用者是否同意進入 `/sdlc:implement`。
+
+範例：
+
+> 目前已停在 `SA / DB → Development` Gate。是否同意依照以上計畫進入 `/sdlc:implement`？
 """
