@@ -1,53 +1,174 @@
-description = "Implement an approved SDLC plan with change-control gates."
+description = "依據已核准的 SDLC Plan 執行受控實作，並停在 Development → Test Gate。"
 prompt = """
-# SDLC Implement Command
+# /sdlc:implement - SDLC 實作階段
 
-You are executing `/sdlc:implement`.
+你正在執行 skills-hub workspace 的 `/sdlc:implement` command。
 
-User request:
+使用者需求：
 {{args}}
 
-## Operating mode
+## 1. 上層規則
 
-Implementation is allowed only when the user has explicitly approved the SDLC plan or change proposal in the current conversation or has provided a clear workflow state that marks the SA / DB to Development gate as approved.
+本 command 不得覆蓋或繞過以下上層規則：
 
-If approval is missing, stop and ask for confirmation. Do not modify files.
+- 根目錄 `GEMINI.md` 的 Change Control、Secrets 保護、安全限制、檔案修改前確認流程與回滾要求。
+- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate 與 Blocking Rule。
+- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State 格式。
 
-## References
+若本 command 與 `GEMINI.md` 發生衝突，必須優先遵守 `GEMINI.md`。
+
+## 2. 執行模式
+
+本 command 只有在使用者已明確核准 SDLC Plan、Change Proposal，或提供的 Workflow State 已標示 `SA / DB → Development` Gate 為 `Approved` 時，才可進入實作。
+
+若找不到核准依據，必須停止，不得修改檔案。
+
+實作時仍必須遵守最小變更原則：
+
+- 只處理 approved scope。
+- 不擴大需求。
+- 不自行決定未確認的業務規則。
+- 不引入與目標專案不相容的語法、套件、框架或架構。
+- 不輸出 secrets。
+- 不把 temporary workaround 包裝成正式長期方案。
+
+## 3. 語言與術語
+
+輸出以繁體中文為主。
+
+以下工程術語可保留英文：Approved Scope、Out of Scope、Change Proposal、Implementation Summary、Self-test、Rollback、Gate、Blocking Issue、Handoff、Workflow State。
+
+## 4. 權威參考
+
+執行時應優先參考：
 
 - Root governance: `GEMINI.md`
 - SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
 - Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
 
-## Required flow
+## 5. Agent / Skill 使用原則
 
-1. Locate the approved plan or workflow state from the current conversation, supplied file, or user prompt.
-2. Confirm target project path.
-3. Confirm expected file changes and DB changes.
-4. Apply only the approved scope.
-5. Maintain existing project language, framework, version, naming, and style.
-6. If the implementation requires changing scope, pause and return to SA / DB gate.
-7. If DB changes are needed, produce SQL / migration / rollback SQL only within the approved scope.
-8. Produce self-test instructions.
-9. Stop at Development to Test gate.
+本 command 應以 Developer Agent 視角執行，並套用 `developer-implementer` Skill。
 
-## Required output format
+必要時可借用以下視角，但不得取代主責：
+
+| 情境 | 使用視角 | 行為 |
+|---|---|---|
+| 發現需求不清或 scope 變更 | SA Agent | 停止實作，回到規劃或要求確認 |
+| 發現 DB / SQL / Schema / Data Flow 變更 | DB Agent | 停止或只在 approved scope 內處理，並要求 DB Gate 確認 |
+| 需要自測規劃 | Test Agent | 產出自測方式，不宣稱未執行測試已通過 |
+| 涉及 secrets、auth、config、dependency | Security Agent | 標示風險，不自行套用未核准的安全 workaround |
+
+## 6. 實作前必要檢查
+
+開始任何實體檔案變更前，必須先確認：
+
+1. Approval Evidence：使用者在目前對話中明確同意，或 Workflow State Gate 已標示 Approved。
+2. Target Project：目標專案路徑明確。
+3. Approved Scope：本次允許修改的功能、檔案、DB 物件、限制已清楚。
+4. Not Allowed Scope：不允許修改的範圍已清楚。
+5. Expected File Changes：與實際要改的檔案一致。
+6. Expected DB Changes：若涉及 DB，已完成 DB impact 與 rollback direction。
+7. Rollback Direction：至少能說明如何還原本次變更。
+
+若任一項不清楚，必須停止並回報缺口，不得猜測。
+
+## 7. 必要流程
+
+1. 讀取 approved plan、workflow state、使用者明確核准內容或使用者提供的實作指示。
+2. 摘要 Approval Evidence。
+3. 確認 target project 與 approved scope。
+4. 列出本次將處理與不處理的範圍。
+5. 只讀取與本次 approved scope 直接相關的檔案。
+6. 依照目標專案既有語言、框架、版本、命名、錯誤處理、資料存取與目錄風格實作。
+7. 如果需要新增依賴、修改設定、更新 lock file、搬移架構、改 DB schema 或擴大 scope，必須先停止並提出新的 Change Proposal。
+8. 若 DB 變更已核准，只能產出或修改 approved scope 內的 SQL / migration / rollback；不得執行 destructive SQL。
+9. 完成後整理 modified files、implementation summary、DB notes、self-test instructions、risks。
+10. 停在 `Development → Test` Gate，等待使用者是否進入 `/sdlc:review`。
+
+## 8. 停止條件
+
+遇到以下任一情況，必須停止實作：
+
+- 找不到使用者明確核准或 approved workflow state。
+- 需求、Acceptance Criteria、資料規則或權限規則不清。
+- 實作需要超出 approved scope。
+- DB 影響未分析但需求涉及 DB / SQL / Data Flow。
+- 目標專案路徑不明。
+- 需要修改 production data、執行部署、執行 destructive command。
+- 發現可能暴露 secrets 或敏感資訊。
+- 無法維持目標專案既有語法版本或框架相容性。
+
+## 9. 必要輸出格式
 
 # SDLC Implementation Result
 
-## 1. Approved Scope Used
+## 1. Approval Evidence
 
-## 2. Modified Files
+## 2. Target Project
 
-## 3. DB Changes
+## 3. Approved Scope Used
 
-## 4. Implementation Summary
+## 4. Not Allowed Scope
 
-## 5. Self-test Instructions
+## 5. Modified Files
 
-## 6. Risks and Notes
+| Action | Path | Summary | Reason |
+|---|---|---|---|
 
-## 7. Gate Decision Required
+## 6. DB Changes
 
-Ask whether to proceed to `/sdlc:review`.
+| Type | Object / File | Summary | Rollback |
+|---|---|---|---|
+
+若無 DB 變更，請明確寫：`本次未涉及 DB 變更。`
+
+## 7. Implementation Summary
+
+## 8. Compatibility Notes
+
+說明本次是否維持既有語言、框架、版本、命名、錯誤處理與架構風格。
+
+## 9. Self-test Instructions
+
+| Test | Steps | Expected Result | Notes |
+|---|---|---|---|
+
+若未實際執行測試，必須標示 `Not Executed`，不得宣稱 pass。
+
+## 10. Risks and Follow-up
+
+## 11. Workflow State Snapshot
+
+```markdown
+# SDLC Workflow State Snapshot
+
+| Item | Value |
+|---|---|
+| Current Stage | Development |
+| Gate | Development → Test |
+| Gate Status | Pending / Ready for Approval / Blocked |
+| Required Next Command | /sdlc:review |
+
+## Stage Status
+
+| Stage | Status | Owner Agent | Notes |
+|---|---|---|---|
+| Development | Done / Blocked | Developer Agent | |
+| DB Change | Done / Skipped / Blocked | DB Agent | |
+
+## Gate Decision Required
+
+- Gate: Development → Test
+- Status:
+- Required user decision:
+```
+
+## 12. Gate Decision Required
+
+最後必須明確詢問使用者是否同意進入 `/sdlc:review`。
+
+範例：
+
+> 目前已停在 `Development → Test` Gate。是否同意進入 `/sdlc:review` 進行測試、Code Review、DB Review 與 Security Review？
 """
