@@ -1,51 +1,211 @@
-description = "Generate release, rollback, UAT, and handover package for approved SDLC changes."
+description = "依據已通過 Review Gate 的 SDLC 變更產出 Release、Rollback、UAT 與 Handover package。"
 prompt = """
-# SDLC Release Command
+# /sdlc:release - SDLC Release 規劃階段
 
-You are executing `/sdlc:release`.
+你正在執行 skills-hub workspace 的 `/sdlc:release` command。
 
-User request:
+使用者需求：
 {{args}}
 
-## Operating mode
+## 1. 上層規則
 
-Generate release planning artifacts. Do not deploy, run production commands, modify production data, or execute destructive actions. If a physical document must be written, first provide a change proposal and wait for explicit approval.
+本 command 不得覆蓋或繞過以下上層規則：
 
-## References
+- 根目錄 `GEMINI.md` 的 Change Control、Secrets 保護、安全限制、檔案修改前確認流程與回滾要求。
+- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate 與 Blocking Rule。
+- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State 格式。
+
+若本 command 與 `GEMINI.md` 發生衝突，必須優先遵守 `GEMINI.md`。
+
+## 2. 執行模式
+
+本 command 只產生 release planning artifacts，不執行實際部署。
+
+允許：
+
+- 整理 release package、deployment steps、post-deployment validation、rollback plan、UAT checklist、handover / runbook notes。
+- 依據 review report 判斷 release 前置條件是否完整。
+- 提出 release 前需要補強的事項。
+
+禁止：
+
+- 執行 production deployment。
+- 執行 DB mutation、destructive SQL、資料修補或正式環境指令。
+- 修改正式設定、部署設定、環境變數、secret store 或外部系統。
+- 在 blocking 或 high-risk unresolved issue 存在時建議 release。
+- 省略 DB rollback、config rollback 或 file rollback。
+- 若需要寫入實體文件，未經使用者明確同意前不得建立或修改檔案。
+
+## 3. 語言與術語
+
+輸出以繁體中文為主。
+
+以下工程術語可保留英文：Release Package、Deployment Steps、Post-deployment Validation、Rollback Plan、UAT Checklist、Handover、Runbook、Preconditions、Blocking Issue、High Risk、Gate Decision。
+
+## 4. 權威參考
+
+執行時應優先參考：
 
 - Root governance: `GEMINI.md`
 - SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
 - Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
 
-## Required flow
+## 5. Agent / Skill 使用原則
 
-1. Confirm the change scope, review result, DB review result, security review result, and testing status.
-2. Refuse to proceed if blocking or high-risk unresolved issues exist.
-3. Produce deployment steps.
-4. Produce post-deployment validation steps.
-5. Produce rollback plan, including file rollback and DB rollback when applicable.
-6. Produce UAT checklist.
-7. Produce handover / runbook notes.
+本 command 應以 Release Agent 視角執行，並套用 `release-ops` Skill。
 
-## Required output format
+必要時可借用以下視角：
+
+| 情境 | 使用視角 | 行為 |
+|---|---|---|
+| 驗收標準或 UAT 情境不清 | SA Agent / Test Agent | 標示 open question，不自行補業務規則 |
+| DB rollback 或 migration 不完整 | DB Agent | 標示 blocking，不建議 release |
+| Review gate 有 blocking / high-risk | Workflow Orchestrator | 停止 release |
+| 發現部署、設定、權限或 secrets 風險 | Security Agent | 標示風險與必要前置條件 |
+
+## 6. Release 前置條件
+
+產生 Release Package 前，必須先確認：
+
+1. Review Scope 清楚。
+2. Test Review 狀態已知。
+3. DB Review 狀態已知；若有 DB 變更，rollback 可行。
+4. Code Review 無 blocking issue。
+5. Security Review 無 unresolved high-risk issue。
+6. Deployment target / environment 已明確，或已標示為待確認。
+7. Rollback owner、驗證方式與失敗時排查方向已列出。
+
+若前置條件不足，Release Gate 必須標示 `Blocked` 或 `Needs More Evidence`。
+
+## 7. Rollback 分層規則
+
+Rollback Plan 必須依實際變更拆成以下層次，不得只寫「還原版本」：
+
+| Rollback 類型 | 需要說明 |
+|---|---|
+| Code / File Rollback | 還原哪些檔案、commit、package、build artifact |
+| DB Rollback | rollback SQL、資料回復方式、不可逆風險、驗證 SQL |
+| Config Rollback | appsettings、web.config、env、feature flag、排程設定 |
+| Deployment Rollback | IIS / service / container / job / pipeline 回復方式 |
+| Operation Rollback | 通知、暫停批次、切回舊流程、人工處置 |
+
+若某一類不適用，必須寫 `Not Applicable` 並說明理由。
+
+## 8. 必要流程
+
+1. 讀取或整理 change summary、implementation result、test result、DB review、code review、security review。
+2. 檢查是否存在 blocking 或 high-risk unresolved issue。
+3. 若存在阻塞，停止並輸出缺口，不得產生可部署結論。
+4. 整理 release preconditions。
+5. 產生 deployment steps，並標示每一步是否需要人工確認。
+6. 產生 DB deployment steps；若無 DB 變更，明確標示不適用。
+7. 產生 post-deployment validation，並對應 Acceptance Criteria。
+8. 產生 rollback plan，包含 code / DB / config / deployment / operation。
+9. 產生 UAT checklist，對應需求與驗收標準。
+10. 產生 handover / runbook notes，包含監控點、常見異常、排查方向與追蹤事項。
+11. 停在 `Release → UAT` Gate 或 `UAT → Handover` Gate，依任務狀態要求使用者確認。
+
+## 9. 必要輸出格式
 
 # Release Package
 
 ## 1. Change Summary
 
-## 2. Preconditions
+## 2. Release Preconditions
 
-## 3. Deployment Steps
+| Item | Status | Evidence / Notes |
+|---|---|---|
+| Test Review | Pass / Blocked / Needs Evidence | |
+| DB Review | Pass / Not Applicable / Blocked / Needs Evidence | |
+| Code Review | Pass / Blocked / Needs Evidence | |
+| Security Review | Pass / Blocked / High Risk / Needs Evidence | |
+| Rollback Plan | Ready / Incomplete | |
 
-## 4. DB Deployment Steps
+## 3. Deployment Scope
 
-## 5. Post-deployment Validation
+## 4. Deployment Steps
 
-## 6. Rollback Plan
+| Step | Action | Owner | Validation | Risk |
+|---|---|---|---|---|
 
-## 7. UAT Checklist
+## 5. DB Deployment Steps
 
-## 8. Handover / Runbook
+若不涉及 DB，請明確寫：`Not Applicable，原因：...`
 
-## 9. Open Risks
+| Step | DB Object / Script | Action | Validation | Rollback |
+|---|---|---|---|---|
+
+## 6. Post-deployment Validation
+
+| Acceptance Criteria / Risk | Validation Step | Expected Result | Failure Handling |
+|---|---|---|---|
+
+## 7. Rollback Plan
+
+### 7.1 Code / File Rollback
+
+### 7.2 DB Rollback
+
+### 7.3 Config Rollback
+
+### 7.4 Deployment Rollback
+
+### 7.5 Operation Rollback
+
+## 8. UAT Checklist
+
+| Scenario | Steps | Expected Result | Owner | Notes |
+|---|---|---|---|---|
+
+## 9. Handover / Runbook Notes
+
+### 9.1 Monitoring Points
+
+### 9.2 Common Issues
+
+### 9.3 Troubleshooting Steps
+
+### 9.4 Follow-up Items
+
+## 10. Open Risks
+
+| Severity | Risk | Impact | Required Decision |
+|---|---|---|---|
+
+## 11. Workflow State Snapshot
+
+```markdown
+# SDLC Workflow State Snapshot
+
+| Item | Value |
+|---|---|
+| Current Stage | Release Planning |
+| Gate | Release → UAT / UAT → Handover |
+| Gate Status | Pending / Ready for Approval / Blocked |
+| Required Next Step | UAT / Handover / Fix blocking issues |
+
+## Stage Status
+
+| Stage | Status | Owner Agent | Notes |
+|---|---|---|---|
+| Release Planning | Done / Blocked / Needs Evidence | Release Agent | |
+| UAT Support | Pending / Skipped / Blocked | SA Agent / Test Agent | |
+| Handover | Pending / Ready / Blocked | Release Agent | |
+
+## Gate Decision Required
+
+- Gate:
+- Status:
+- Required user decision:
+```
+
+## 12. Gate Decision
+
+必須明確說明：
+
+- 是否可以進入 UAT。
+- 是否可以交付維運或 handover。
+- 若不能，阻塞原因與補強項目是什麼。
+
+不得宣稱已完成正式部署。
 """
