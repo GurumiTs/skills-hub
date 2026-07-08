@@ -24,6 +24,7 @@
 |---|---|
 | 先規格，後實作 | 不得在需求與影響未清楚前直接修改程式 |
 | 先確認版本，再套用慣例 | 針對既有專案時，必須先從專案檔、設定檔、lock file、runtime、package manifest 或 build 設定推斷實際版本，不得無腦套用最新版語法或 API |
+| DB 產品與 hosting 分離 | DB Platform 應記錄 MSSQL、Oracle、BigQuery 等產品 / dialect；Google Cloud SQL、Azure SQL、AWS RDS、VM、on-prem 應記錄為 DB Hosting / Runtime Environment |
 | DB 影響不可跳過 | 只要涉及資料表、SQL、匯入匯出、報表、資料流、migration，就必須進行 DB / Data Impact Analysis |
 | Test Stage 獨立 | Development 後必須進入 `/sdlc:test`，產出 Test Report / Dry Run Result / Regression Scope，才可進入 Review |
 | Gate 必須停下 | 每個關鍵 gate 必須回報狀態，必要時等待使用者確認 |
@@ -40,7 +41,8 @@
 - Runtime / framework：.NET Framework、ASP.NET Framework、WebForms、Python、PowerShell、Java 等實際版本。
 - Dependency version：NuGet、pip、Maven、Gradle、PowerShell module 或其他 dependency manifest。
 - Build / deployment settings：CI 設定、IIS / service / job 設定、環境變數、feature flag、Looker / LookML validation 方式。
-- DB dialect / platform：MsSQL on Google CloudSQL、Oracle、BigQuery 或 LookML 對應 SQL dialect。
+- DB dialect / platform：MSSQL、Oracle、BigQuery 或 LookML 對應 SQL dialect。
+- DB hosting / runtime environment：Google Cloud SQL、Azure SQL、AWS RDS、VM、on-prem 或其他代管 / 部署環境。
 
 若版本不可判斷，必須標示 `Version Context: Unknown` 或 `Needs More Evidence`，不得使用最新版語法、套件、API 或框架慣例作為預設。
 
@@ -51,7 +53,7 @@
 | 1. Requirement Intake | Workflow Orchestrator | 視需要使用 `sa-consultant` | 使用者需求、Redmine、問題描述、現有文件 | 任務摘要、目標、限制、是否需要 SA 分析 |
 | 2. SA Analysis | SA Agent | `sa-consultant` | 需求摘要、問題背景、限制條件 | SA 規格、In Scope、Out of Scope、Assumptions、Open Questions、Acceptance Criteria |
 | 3. Project / Version Discovery | Workflow Orchestrator + Developer Agent | `developer-implementer`，僅做 read-only 判斷 | 目標專案檔案、framework / runtime / dependency manifest、build 設定 | Version Context、Project Constraints、Compatibility Notes、Playbooks Used |
-| 4. DB / Data Impact Analysis | DB Agent | `db-engineering` | SA 規格、資料表、SQL、資料流、DB dialect / platform | DB 影響分析、Table / Column / Index / SQL / Migration 初步評估 |
+| 4. DB / Data Impact Analysis | DB Agent | `db-engineering` | SA 規格、資料表、SQL、資料流、DB dialect / platform、DB hosting context | DB 影響分析、Table / Column / Index / SQL / Migration 初步評估 |
 | 5. Implementation Planning | SA Agent + Developer Agent + DB Agent | `sa-consultant`、`developer-implementer`、`db-engineering` | SA 規格、DB 影響分析、Version Context、現有程式碼 | 實作計畫、預計異動檔案、DB 變更計畫、風險與驗證方式 |
 | 6. Development | Developer Agent | `developer-implementer` | 已確認的實作計畫、Approved Scope、Version Context | 程式變更、變更摘要、自測方式 |
 | 7. DB Change Implementation | DB Agent 或 Developer Agent | `db-engineering` | DB 變更計畫、schema、SQL、rollback direction | SQL script、migration plan、資料驗證方式、rollback SQL |
