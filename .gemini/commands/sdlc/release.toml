@@ -40,7 +40,7 @@ prompt = """
 
 輸出以繁體中文為主。
 
-以下工程術語可保留英文：Release Package、Deployment Steps、Post-deployment Validation、Rollback Plan、UAT Checklist、Handover、Runbook、Preconditions、Test Report、Version Context、Playbooks Used、Blocking Issue、High Risk、Gate Decision、Needs More Evidence。
+以下工程術語可保留英文：Release Package、Deployment Steps、Post-deployment Validation、Rollback Plan、UAT Checklist、Handover、Runbook、Preconditions、Test Report、Version Context、Playbooks Used、DB Hosting、Blocking Issue、High Risk、Gate Decision、Needs More Evidence。
 
 ## 4. 權威參考
 
@@ -104,7 +104,7 @@ Release planning 必須依目標專案實際版本與部署型態規劃：
 - ASP.NET Framework / WebForm：需考慮 IIS、web.config、bin deployment、ViewState / Session 影響與 app pool rollback。
 - C# / .NET：需對應實際 target framework、NuGet package 與 build artifact。
 - Python / PowerShell / Java：需對應 runtime、dependency、service / job / script execution environment。
-- DB：需區分 MsSQL CloudSQL、Oracle、BigQuery 的 deployment、validation、rollback 與權限風險。
+- DB：需區分 MSSQL、Oracle、BigQuery 的 deployment、validation、rollback 與權限風險；Google Cloud SQL 等代管環境應記錄為 DB Hosting，不得混入 DB Platform。
 - LookML / Looker：需處理 content validation、model / explore / view impact 與 BI 驗證流程。
 
 若 deployment target 或 version context 不明，必須標示 `Needs More Evidence`。
@@ -137,7 +137,8 @@ Release planning 必須依目標專案實際版本與部署型態規劃：
 | Runtime / Framework Version | | | |
 | Language Version | | | |
 | Dependency Source | | | |
-| DB Platform | | | |
+| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
 | Version Risk | None / Low / Medium / High / Needs More Evidence | | |
 
 ## 3. Playbooks Used
@@ -237,6 +238,7 @@ Release planning 必須依目標專案實際版本與部署型態規劃：
 | Project Type | | | |
 | Runtime / Framework Version | | | |
 | DB Platform | | | |
+| DB Hosting / Runtime Environment | | | |
 | Version Risk | | | |
 
 ## Playbooks Used
