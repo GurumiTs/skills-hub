@@ -18,6 +18,23 @@
 
 `Playbook selection` 是本 repo 的 prompt convention，不是 Gemini CLI 官方自動 routing 功能。Agent / Skill 若需要參考技術棧、DB、testing 或 release playbook，必須在輸出中明確列出 `Playbooks Used`、判斷依據與缺口；若無法判斷，必須標示 `Needs More Evidence`。
 
+## Available Playbooks
+
+以下是本 repo 目前可明確引用的 Playbooks。這份清單只是專案層參考索引，不是 Gemini CLI 官方 registry，也不代表 CLI 會自動 routing。
+
+| Area | Playbook | Use When |
+|---|---|---|
+| Workflow | `docs/playbooks/workflow/sdlc-pipeline.md` | SDLC stages、gates、handoff、blocking rule |
+| Workflow | `docs/playbooks/workflow/workflow-state.md` | Workflow State Snapshot、Gate Decisions、Version Context 格式 |
+| Testing | `docs/playbooks/testing/dry-run.md` | `/sdlc:test` 需要 dry run、測試前置條件、Not Tested / Needs More Evidence 判斷 |
+| Testing | `docs/playbooks/testing/db-assisted-dry-run.md` | `/sdlc:test` 需要 DB read-only evidence、metadata、bounded query、BigQuery dry run 或 LookML validation evidence |
+| Database | `docs/playbooks/database/mssql.md` | DB Platform / Dialect 是 MSSQL / SQL Server / T-SQL |
+| Database | `docs/playbooks/database/oracle.md` | DB Platform / Dialect 是 Oracle / Oracle SQL / PL/SQL |
+| Database | `docs/playbooks/database/bigquery.md` | DB Platform / Dialect 是 BigQuery / GoogleSQL |
+| BI / Semantic Layer | `docs/playbooks/bi/lookml.md` | 任務涉及 LookML / Looker model、view、explore、dashboard impact |
+
+若任務涉及的技術棧 playbook 尚未建立，例如 C#、ASP.NET Framework、WebForm、Python、PowerShell、Java 或 Prompting，必須在 `Playbooks Used` 標示 `Missing` 或 `Needs More Evidence`，不得假裝已參考。
+
 ## Core Principles
 
 | 原則 | 說明 |
