@@ -42,7 +42,7 @@ prompt = """
 
 輸出以繁體中文為主。
 
-以下工程術語可保留英文：Test Scope、Out of Test Scope、Test Case、Edge Case、Test Data、Regression Scope、Dry Run、DB-assisted Dry Run、Execution Result、Pass、Fail、Blocked、Not Tested、Not Applicable、Gate、Handoff、Workflow State、Read-only、Mutation、Q System、Test Runner、Version Context、Playbooks Used、Needs More Evidence。
+以下工程術語可保留英文：Test Scope、Out of Test Scope、Test Case、Edge Case、Test Data、Regression Scope、Dry Run、DB-assisted Dry Run、Execution Result、Pass、Fail、Blocked、Not Tested、Not Applicable、Gate、Handoff、Workflow State、Read-only、Mutation、Q System、Test Runner、Version Context、Playbooks Used、Needs More Evidence、DB Hosting。
 
 ## 4. 權威參考
 
@@ -89,7 +89,7 @@ prompt = """
 - Python：不得預設使用 runtime 不支援的 pytest / unittest / library API。
 - PowerShell：必須區分 Windows PowerShell 5.1 與 PowerShell 7+。
 - Java：必須依 JDK、Maven / Gradle 與 framework version 設計測試。
-- DB：必須依 MsSQL CloudSQL、Oracle、BigQuery 或 LookML dialect 判斷 dry run / validation 方法。
+- DB：必須依 MSSQL、Oracle、BigQuery 或 LookML dialect 判斷 dry run / validation 方法；Google Cloud SQL 等代管環境應記錄為 DB Hosting，不得混入 DB Platform。
 
 若 Version Context 會影響測試但不可判斷，Gate 必須標示 `Needs More Evidence` 或 `Blocked`。
 
@@ -178,7 +178,8 @@ Planning / Dry Run / DB-assisted Dry Run / Evidence Review / Execution
 | Runtime / Framework Version | | | |
 | Language Version | | | |
 | Dependency Source | | | |
-| DB Platform | | | |
+| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
 | Version Risk | None / Low / Medium / High / Needs More Evidence | | |
 
 ## 4. Playbooks Used
@@ -261,6 +262,7 @@ Planning / Dry Run / DB-assisted Dry Run / Evidence Review / Execution
 | Project Type | | | |
 | Runtime / Framework Version | | | |
 | DB Platform | | | |
+| DB Hosting / Runtime Environment | | | |
 | Version Risk | | | |
 
 ## Playbooks Used
