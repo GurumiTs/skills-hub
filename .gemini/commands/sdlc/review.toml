@@ -25,7 +25,7 @@ prompt = """
 
 - 讀取 implementation summary、modified files、git diff、Project / Version Context、Playbooks Used、Test Report、DB 變更、設定檔與相關文件。
 - 檢查 Test Report 是否足以支撐 review gate。
-- 檢查變更是否符合目標專案實際 runtime、framework、language、dependency、DB dialect 與既有風格。
+- 檢查變更是否符合目標專案實際 runtime、framework、language、dependency、DB platform / dialect、DB hosting 與既有風格。
 - 執行不會造成檔案或資料異動的 review 檢查。
 - 提出 blocking / non-blocking findings、修正建議、release gate 判斷。
 
@@ -41,7 +41,7 @@ prompt = """
 
 輸出以繁體中文為主。
 
-以下工程術語可保留英文：Review Scope、Test Report、Test Evidence、Version Context、Playbooks Used、Compatibility Review、DB Review、Code Review、Security Review、Blocking Issue、High Risk、Medium、Low、Suggestion、Gate Decision、Not Tested、Not Applicable、Rollback、Needs More Evidence。
+以下工程術語可保留英文：Review Scope、Test Report、Test Evidence、Version Context、Playbooks Used、Compatibility Review、DB Hosting、DB Review、Code Review、Security Review、Blocking Issue、High Risk、Medium、Low、Suggestion、Gate Decision、Not Tested、Not Applicable、Rollback、Needs More Evidence。
 
 ## 4. 權威參考
 
@@ -52,8 +52,6 @@ prompt = """
 - Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
 
 ## 5. Agent / Skill 使用原則
-
-本 command 應依序套用以下 Agent 視角與 Skill 能力：
 
 | Review 區塊 | Agent 視角 | Skill 能力 | 必要性 |
 |---|---|---|---|
@@ -89,7 +87,7 @@ prompt = """
 - Python：檢查語法與 library API 是否符合目標 runtime 與 dependency version。
 - PowerShell：檢查 Windows PowerShell 5.1 / PowerShell 7+ 差異。
 - Java：檢查 JDK、Maven / Gradle、framework version 相容性。
-- DB / SQL / LookML：檢查 MsSQL CloudSQL、Oracle、BigQuery、LookML dialect 與資料流相容性。
+- DB / SQL / LookML：檢查 MSSQL、Oracle、BigQuery、LookML dialect 與資料流相容性；Google Cloud SQL 等代管環境應記錄為 DB Hosting，不得混入 DB Platform。
 
 若 Version Context 缺失且會影響 review 判斷，必須標示 `Needs More Evidence`。
 
@@ -107,20 +105,11 @@ prompt = """
 
 ## 9. DB Review 觸發條件
 
-只要本次變更涉及以下任一項，就必須執行 DB Review：
-
-- table、column、index、view、stored procedure、function、trigger。
-- SQL、query、report、filter、sort、pagination、aggregation。
-- import / export、資料同步、批次、排程、資料轉換。
-- migration、rollback SQL、資料修補、歷史資料。
-- 權限資料、角色資料、設定資料、流程狀態資料。
-- API、LookML、Looker、BigQuery 或系統整合中的資料流。
+只要本次變更涉及以下任一項，就必須執行 DB Review：table、column、index、view、stored procedure、function、trigger、SQL、query、report、filter、sort、pagination、aggregation、import / export、資料同步、批次、排程、migration、rollback SQL、資料修補、權限資料、API、LookML、Looker、BigQuery 或系統整合中的資料流。
 
 若變更看似不涉及 DB，也要在輸出中明確寫出 `DB Review: Not Applicable` 與理由。
 
 ## 10. Finding 分級規則
-
-Findings 必須使用以下分級：
 
 | 等級 | 定義 | Gate 行為 |
 |---|---|---|
@@ -156,7 +145,8 @@ Findings 必須使用以下分級：
 | Runtime / Framework Version | | | |
 | Language Version | | | |
 | Dependency Source | | | |
-| DB Platform | | | |
+| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
 | Version Risk | None / Low / Medium / High / Needs More Evidence | | |
 
 ## 3. Playbooks Used
@@ -291,6 +281,7 @@ Decision: Pass / Blocked / High Risk / Needs More Evidence
 | Project Type | | | |
 | Runtime / Framework Version | | | |
 | DB Platform | | | |
+| DB Hosting / Runtime Environment | | | |
 | Version Risk | | | |
 
 ## Playbooks Used
