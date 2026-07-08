@@ -38,7 +38,7 @@ prompt = """
 
 輸出以繁體中文為主。
 
-以下工程術語可保留英文：Scope、In Scope、Out of Scope、Assumption、Open Question、Acceptance Criteria、Gate、Handoff、Rollback、Blocking Issue、Workflow State、Read-only、Mutation、Version Context、Playbooks Used、Test Report、Dry Run、Needs More Evidence。
+以下工程術語可保留英文：Scope、In Scope、Out of Scope、Assumption、Open Question、Acceptance Criteria、Gate、Handoff、Rollback、Blocking Issue、Workflow State、Read-only、Mutation、Version Context、Playbooks Used、Test Report、Dry Run、Needs More Evidence、DB Hosting。
 
 ## 4. 權威參考
 
@@ -74,7 +74,10 @@ prompt = """
 - PowerShell：`.ps1`、`.psm1`、`.psd1`、PowerShell 版本與 module version。
 - Java：`pom.xml`、`build.gradle`、JDK version、framework version。
 - Prompting：prompt template、agent prompt、system / developer / user role 邊界。
-- DB / BI：MsSQL CloudSQL、Oracle、BigQuery、LookML / Looker model / explore / view。
+- DB / BI：MSSQL、Oracle、BigQuery、LookML / Looker model / explore / view。
+- DB Hosting / Runtime Environment：Google Cloud SQL、Azure SQL、AWS RDS、VM、on-prem 或其他代管 / 部署環境。
+
+DB Platform 與 DB Hosting 必須分開記錄。`MSSQL` 是 DB platform / dialect；`Google Cloud SQL` 是 hosting / managed service context。
 
 若版本不可判斷，必須輸出 `Version Context: Unknown` 並將 Gate 標示為 `Needs More Evidence` 或 `Blocked`，不得建議直接實作。
 
@@ -147,7 +150,8 @@ prompt = """
 | Language Version | | | |
 | Dependency Source | NuGet / pip / Maven / Gradle / PowerShell module / Other | | |
 | Build / Deployment Target | | | |
-| DB Platform | MsSQL CloudSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
 | BI / Semantic Layer | LookML / Looker / Not Applicable / Unknown | | |
 | Version Risk | None / Low / Medium / High / Needs More Evidence | | |
 
@@ -233,6 +237,7 @@ prompt = """
 | Project Type | | | |
 | Runtime / Framework Version | | | |
 | DB Platform | | | |
+| DB Hosting / Runtime Environment | | | |
 | Version Risk | | | |
 
 ## Playbooks Used
