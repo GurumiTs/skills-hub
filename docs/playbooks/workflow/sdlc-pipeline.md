@@ -26,6 +26,13 @@
 |---|---|---|
 | Workflow | `docs/playbooks/workflow/sdlc-pipeline.md` | SDLC stages、gates、handoff、blocking rule |
 | Workflow | `docs/playbooks/workflow/workflow-state.md` | Workflow State Snapshot、Gate Decisions、Version Context 格式 |
+| Tech Stack | `docs/playbooks/tech-stacks/csharp.md` | 任務涉及 C# application、class library、service、job 或 data access code |
+| Tech Stack | `docs/playbooks/tech-stacks/aspnet-framework.md` | 任務涉及 ASP.NET Framework、web.config、IIS、MVC 5、Web API 2 或 legacy web app |
+| Tech Stack | `docs/playbooks/tech-stacks/webforms.md` | 任務涉及 `.aspx`、`.ascx`、`.master`、code-behind、ViewState、PostBack 或 WebForms lifecycle |
+| Tech Stack | `docs/playbooks/tech-stacks/python.md` | 任務涉及 Python script、service、job、ETL、automation 或 Python test |
+| Tech Stack | `docs/playbooks/tech-stacks/powershell.md` | 任務涉及 PowerShell script、module、deployment helper、maintenance automation 或 Windows operation |
+| Tech Stack | `docs/playbooks/tech-stacks/java.md` | 任務涉及 Java、JDK、Maven / Gradle、Spring / Java EE、JDBC / JPA 或 Java tests |
+| Tech Stack | `docs/playbooks/tech-stacks/prompting.md` | 任務涉及 Command、Agent、Skill、GEMINI.md、prompt role boundary 或 output format design |
 | Testing | `docs/playbooks/testing/dry-run.md` | `/sdlc:test` 需要 dry run、測試前置條件、Not Tested / Needs More Evidence 判斷 |
 | Testing | `docs/playbooks/testing/db-assisted-dry-run.md` | `/sdlc:test` 需要 DB read-only evidence、metadata、bounded query、BigQuery dry run 或 LookML validation evidence |
 | Database | `docs/playbooks/database/mssql.md` | DB Platform / Dialect 是 MSSQL / SQL Server / T-SQL |
@@ -33,7 +40,7 @@
 | Database | `docs/playbooks/database/bigquery.md` | DB Platform / Dialect 是 BigQuery / GoogleSQL |
 | BI / Semantic Layer | `docs/playbooks/bi/lookml.md` | 任務涉及 LookML / Looker model、view、explore、dashboard impact |
 
-若任務涉及的技術棧 playbook 尚未建立，例如 C#、ASP.NET Framework、WebForm、Python、PowerShell、Java 或 Prompting，必須在 `Playbooks Used` 標示 `Missing` 或 `Needs More Evidence`，不得假裝已參考。
+若任務涉及的技術棧或平台 playbook 尚未建立，必須在 `Playbooks Used` 標示 `Missing` 或 `Needs More Evidence`，不得假裝已參考。
 
 ## Core Principles
 
