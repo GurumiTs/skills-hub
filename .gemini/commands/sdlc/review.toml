@@ -1,4 +1,4 @@
-description = "依據 Test Report 執行 SDLC Review 階段：DB Review、Code Review、Security Review 與 Gate 判斷。"
+description = "依據 Test Report、Version Context 與 Review Scope 執行 SDLC Review 階段：DB Review、Code Review、Security Review 與 Gate 判斷。"
 prompt = """
 # /sdlc:review - SDLC Review 階段
 
@@ -12,8 +12,8 @@ prompt = """
 本 command 不得覆蓋或繞過以下上層規則：
 
 - 根目錄 `GEMINI.md` 的 Change Control、Secrets 保護、安全限制、檔案修改前確認流程與回滾要求。
-- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate 與 Blocking Rule。
-- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State 格式。
+- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate、Version Context、DB-assisted Dry Run 與 Blocking Rule。
+- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State、Playbooks Used、Version Context 與 Review 交接格式。
 
 若本 command 與 `GEMINI.md` 發生衝突，必須優先遵守 `GEMINI.md`。
 
@@ -23,16 +23,17 @@ prompt = """
 
 允許：
 
-- 讀取 implementation summary、modified files、git diff、Test Report、DB 變更、設定檔與相關文件。
+- 讀取 implementation summary、modified files、git diff、Project / Version Context、Playbooks Used、Test Report、DB 變更、設定檔與相關文件。
 - 檢查 Test Report 是否足以支撐 review gate。
+- 檢查變更是否符合目標專案實際 runtime、framework、language、dependency、DB dialect 與既有風格。
 - 執行不會造成檔案或資料異動的 review 檢查。
 - 提出 blocking / non-blocking findings、修正建議、release gate 判斷。
 
 禁止：
 
 - 未經使用者明確同意前修改檔案、套用修正、格式化程式、更新 package 或產生實體文件。
-- 執行 destructive command、DB mutation、production command 或部署。
-- 將缺少 Test Report、未執行測試或缺少測試證據的項目標示為 pass。
+- 執行 destructive command、DB mutation、production command、測試執行或部署。
+- 將缺少 Test Report、未執行測試、缺少版本依據或缺少測試證據的項目標示為 pass。
 - 在 high-risk 或 blocking issue 未解決時建議 release。
 - 在回覆中完整輸出 secrets、connection string、token、password、cookie 或私人憑證。
 
@@ -40,7 +41,7 @@ prompt = """
 
 輸出以繁體中文為主。
 
-以下工程術語可保留英文：Review Scope、Test Report、Test Evidence、DB Review、Code Review、Security Review、Blocking Issue、High Risk、Medium、Low、Suggestion、Gate Decision、Not Tested、Not Applicable、Rollback、Needs More Evidence。
+以下工程術語可保留英文：Review Scope、Test Report、Test Evidence、Version Context、Playbooks Used、Compatibility Review、DB Review、Code Review、Security Review、Blocking Issue、High Risk、Medium、Low、Suggestion、Gate Decision、Not Tested、Not Applicable、Rollback、Needs More Evidence。
 
 ## 4. 權威參考
 
@@ -57,6 +58,7 @@ prompt = """
 | Review 區塊 | Agent 視角 | Skill 能力 | 必要性 |
 |---|---|---|---|
 | Test Report Evidence Check | Test Agent / Workflow Orchestrator | `test-engineer`，只檢查證據完整性，不重做完整 Test Stage | 必須執行 |
+| Version Compatibility Review | Developer Agent / Review Agent | `developer-implementer` / `code-reviewer`，只做 read-only 判斷 | 必須執行 |
 | DB Review | DB Agent | `db-engineering` | 只要涉及 DB / SQL / Data Flow 就必須執行 |
 | Code Review | Review Agent | `code-reviewer` | 必須執行 |
 | Security Review | Security Agent | `security-reviewer` | 必須執行 |
@@ -68,27 +70,42 @@ prompt = """
 
 1. Approved Scope。
 2. Modified Files。
-3. DB Changes。
-4. Test Report。
-5. Test Evidence。
-6. Known Risks。
-7. Workflow State。
-8. 是否有未完成或超出 scope 的變更。
+3. Project / Version Context。
+4. Playbooks Used。
+5. DB Changes。
+6. Test Report。
+7. Test Evidence。
+8. Known Risks。
+9. Workflow State。
+10. 是否有未完成、版本不相容或超出 scope 的變更。
 
-若無法判斷 review scope，必須將 Gate 狀態標示為 `Blocked`，不得進入 release。
+若無法判斷 review scope，必須將 Gate 狀態標示為 `Blocked` 或 `Needs More Evidence`，不得進入 release。
 
-## 7. Test Report 前置條件
+## 7. Version Compatibility Review 規則
+
+必須確認本次變更是否符合目標專案實際版本，不得只用最新版慣例 review：
+
+- C# / ASP.NET Framework / WebForm：檢查是否誤用 ASP.NET Core、.NET 最新版 API、新版 C# 語法、與 WebForm lifecycle 不相容的模式。
+- Python：檢查語法與 library API 是否符合目標 runtime 與 dependency version。
+- PowerShell：檢查 Windows PowerShell 5.1 / PowerShell 7+ 差異。
+- Java：檢查 JDK、Maven / Gradle、framework version 相容性。
+- DB / SQL / LookML：檢查 MsSQL CloudSQL、Oracle、BigQuery、LookML dialect 與資料流相容性。
+
+若 Version Context 缺失且會影響 review 判斷，必須標示 `Needs More Evidence`。
+
+## 8. Test Report 前置條件
 
 進入 DB / Code / Security Review 前，必須先檢查 Test Report：
 
 - 是否來自 `/sdlc:test` 或使用者提供的等效測試證據。
-- 是否包含 Test Scope、Test Cases、Test Data、Regression Scope、Execution Result。
+- 是否包含 Project / Version Context、Playbooks Used、Test Scope、Test Cases、Test Data、Regression Scope、Execution Result。
+- 是否有 DB-assisted Dry Run Evidence；若任務涉及 DB table / schema / dataset / LookML，必須檢查其 read-only evidence 是否足夠。
 - 是否有 Failed、Blocked、Not Tested 或 Needs More Evidence 項目。
 - 是否對每一項 Acceptance Criteria 至少有對應測試案例，或明確標示無法測試原因。
 
-若 Test Report 缺失、主要測試未執行、或存在 unresolved blocking failure，必須停止並標示 Gate `Blocked` 或 `Needs More Evidence`。
+若 Test Report 缺失、主要測試未執行、版本脈絡不足或存在 unresolved blocking failure，必須停止並標示 Gate `Blocked` 或 `Needs More Evidence`。
 
-## 8. DB Review 觸發條件
+## 9. DB Review 觸發條件
 
 只要本次變更涉及以下任一項，就必須執行 DB Review：
 
@@ -97,124 +114,165 @@ prompt = """
 - import / export、資料同步、批次、排程、資料轉換。
 - migration、rollback SQL、資料修補、歷史資料。
 - 權限資料、角色資料、設定資料、流程狀態資料。
-- API 或系統整合中的資料流。
+- API、LookML、Looker、BigQuery 或系統整合中的資料流。
 
 若變更看似不涉及 DB，也要在輸出中明確寫出 `DB Review: Not Applicable` 與理由。
 
-## 9. Finding 分級規則
+## 10. Finding 分級規則
 
 Findings 必須使用以下分級：
 
 | 等級 | 定義 | Gate 行為 |
 |---|---|---|
-| Blocking | 會造成需求不符、資料錯誤、資安重大風險、無法 rollback、測試阻斷或正式環境高風險 | 必須停止，不得 release |
-| High | 可能造成重大缺陷、資料正確性風險、權限風險、注入風險或部署高風險 | 原則上不得 release，需使用者明確處理或接受風險 |
+| Blocking | 會造成需求不符、資料錯誤、版本不相容、編譯失敗、資安重大風險、無法 rollback、測試阻斷或正式環境高風險 | 必須停止，不得 release |
+| High | 可能造成重大缺陷、資料正確性風險、權限風險、注入風險、版本相容風險或部署高風險 | 原則上不得 release，需使用者明確處理或接受風險 |
 | Medium | 有明確改善需求，但可評估是否延後 | 可進入 release 但需列入風險 |
 | Low | 小型可維護性、命名、文件或非關鍵問題 | 可進入 release |
 | Suggestion | 建議優化，不影響本次 Gate | 可進入 release |
 
-## 10. 必要流程
+## 11. 必要流程
 
-1. 確認 review scope 與輸入資料是否足夠。
+1. 確認 review scope、Version Context、Playbooks Used 與輸入資料是否足夠。
 2. 檢查 Test Report evidence；若缺失、不完整或存在 blocking failure，停止。
-3. 判斷是否需要 DB Review；若需要，檢查 SQL、migration、data validation、transaction、locking、performance、rollback。
-4. 執行 Code Review：檢查正確性、需求符合度、可維護性、相容性、例外處理、專案風格與 regression risk。
-5. 執行 Security Review：檢查 sensitive data、input validation、permission and access control、configuration and dependency、error handling and logging risk。
-6. 彙整 Blocking / High / Medium / Low / Suggestion findings。
-7. 根據 findings 判斷是否可進入 `/sdlc:release`。
-8. 停在 `Security → Release` Gate，要求使用者確認下一步。
+3. 執行 Version Compatibility Review。
+4. 判斷是否需要 DB Review；若需要，檢查 SQL、migration、data validation、transaction、locking、performance、rollback。
+5. 執行 Code Review：檢查正確性、需求符合度、可維護性、相容性、例外處理、專案風格與 regression risk。
+6. 執行 Security Review：檢查 sensitive data、input validation、permission and access control、configuration and dependency、error handling and logging risk。
+7. 彙整 Blocking / High / Medium / Low / Suggestion findings。
+8. 根據 findings 判斷是否可進入 `/sdlc:release`。
+9. 停在 `Security → Release` Gate，要求使用者確認下一步。
 
-## 11. 必要輸出格式
+## 12. 必要輸出格式
 
 # SDLC Review Report
 
 ## 1. Review Scope
 
-## 2. Input Evidence
+## 2. Project / Version Context Used
+
+| Item | Value | Evidence / Source | Notes |
+|---|---|---|---|
+| Project Type | | | |
+| Runtime / Framework Version | | | |
+| Language Version | | | |
+| Dependency Source | | | |
+| DB Platform | | | |
+| Version Risk | None / Low / Medium / High / Needs More Evidence | | |
+
+## 3. Playbooks Used
+
+| Area | Playbook | Selection Reason | Status |
+|---|---|---|---|
+| Workflow | docs/playbooks/workflow/sdlc-pipeline.md | Standard SDLC pipeline | Used |
+| Workflow | docs/playbooks/workflow/workflow-state.md | Workflow State format | Used |
+| Tech Stack | | | Used / Missing / Needs More Evidence |
+| Database | | | Used / Missing / Needs More Evidence / Not Applicable |
+| Testing | | | Used / Missing / Needs More Evidence |
+| Review | | | Used / Missing / Needs More Evidence |
+| Security | | | Used / Missing / Needs More Evidence |
+
+## 4. Input Evidence
 
 | Item | Provided / Missing | Notes |
 |---|---|---|
 | Approved Scope | | |
 | Modified Files | | |
+| Version Context | | |
 | DB Changes | | |
 | Test Report | | |
 | Test Evidence | | |
 | Workflow State | | |
 
-## 3. Test Report Evidence Check
+## 5. Test Report Evidence Check
 
-### 3.1 Test Scope Evidence
+### 5.1 Test Scope Evidence
 
-### 3.2 Test Cases Evidence
+### 5.2 Test Cases Evidence
 
-### 3.3 Execution Result Evidence
+### 5.3 Execution Result Evidence
 
-### 3.4 Failed / Blocked / Not Tested Items
+### 5.4 DB-assisted Dry Run Evidence
 
-### 3.5 Test Evidence Decision
+### 5.5 Failed / Blocked / Not Tested Items
+
+### 5.6 Test Evidence Decision
 
 Decision: Pass / Blocked / Not Tested / Needs More Evidence
 
-## 4. DB Review
+## 6. Version Compatibility Review
 
-### 4.1 Applicability
+### 6.1 Runtime / Framework Compatibility
 
-DB Review: Required / Not Applicable / Blocked
+### 6.2 Language / API Compatibility
 
-### 4.2 Affected DB Objects
+### 6.3 Dependency Compatibility
 
-### 4.3 Data Correctness
+### 6.4 DB / BI Dialect Compatibility
 
-### 4.4 Transaction / Locking / Performance
-
-### 4.5 Migration and Rollback
-
-### 4.6 DB Review Decision
-
-Decision: Pass / Blocked / Needs More Evidence / Not Applicable
-
-## 5. Code Review
-
-### 5.1 Correctness
-
-### 5.2 Maintainability
-
-### 5.3 Compatibility
-
-### 5.4 Error Handling
-
-### 5.5 Regression Risk
-
-### 5.6 Code Review Decision
+### 6.5 Version Compatibility Decision
 
 Decision: Pass / Blocked / Needs More Evidence
 
-## 6. Security Review
+## 7. DB Review
 
-### 6.1 Sensitive Data Review
+### 7.1 Applicability
 
-### 6.2 Input Validation Review
+DB Review: Required / Not Applicable / Blocked
 
-### 6.3 Permission and Access Control Review
+### 7.2 Affected DB Objects
 
-### 6.4 Configuration and Dependency Review
+### 7.3 Data Correctness
 
-### 6.5 Error Handling and Logging Review
+### 7.4 Transaction / Locking / Performance
 
-### 6.6 Security Review Decision
+### 7.5 Migration and Rollback
+
+### 7.6 DB Review Decision
+
+Decision: Pass / Blocked / Needs More Evidence / Not Applicable
+
+## 8. Code Review
+
+### 8.1 Correctness
+
+### 8.2 Maintainability
+
+### 8.3 Compatibility
+
+### 8.4 Error Handling
+
+### 8.5 Regression Risk
+
+### 8.6 Code Review Decision
+
+Decision: Pass / Blocked / Needs More Evidence
+
+## 9. Security Review
+
+### 9.1 Sensitive Data Review
+
+### 9.2 Input Validation Review
+
+### 9.3 Permission and Access Control Review
+
+### 9.4 Configuration and Dependency Review
+
+### 9.5 Error Handling and Logging Review
+
+### 9.6 Security Review Decision
 
 Decision: Pass / Blocked / High Risk / Needs More Evidence
 
-## 7. Findings
+## 10. Findings
 
 | Severity | Area | Finding | Impact | Recommendation | Gate Impact |
 |---|---|---|---|---|---|
 
-## 8. Blocking Issues
+## 11. Blocking Issues
 
-## 9. Non-blocking Issues
+## 12. Non-blocking Issues
 
-## 10. Workflow State Snapshot
+## 13. Workflow State Snapshot
 
 ```markdown
 # SDLC Workflow State Snapshot
@@ -226,11 +284,26 @@ Decision: Pass / Blocked / High Risk / Needs More Evidence
 | Gate Status | Pending / Ready for Approval / Blocked / Needs More Evidence |
 | Required Next Command | /sdlc:release |
 
+## Project / Version Context
+
+| Item | Value | Evidence / Source | Notes |
+|---|---|---|---|
+| Project Type | | | |
+| Runtime / Framework Version | | | |
+| DB Platform | | | |
+| Version Risk | | | |
+
+## Playbooks Used
+
+| Area | Playbook | Selection Reason | Status |
+|---|---|---|---|
+
 ## Stage Status
 
 | Stage | Status | Owner Agent | Notes |
 |---|---|---|---|
 | Test Evidence Check | Done / Blocked / Needs More Evidence | Test Agent / Workflow Orchestrator | |
+| Version Compatibility Review | Done / Blocked / Needs More Evidence | Developer Agent / Review Agent | |
 | DB Review | Done / Skipped / Blocked / Needs More Evidence | DB Agent | |
 | Code Review | Done / Blocked / Needs More Evidence | Review Agent | |
 | Security Review | Done / Blocked / Needs More Evidence | Security Agent | |
@@ -242,7 +315,7 @@ Decision: Pass / Blocked / High Risk / Needs More Evidence
 - Required user decision:
 ```
 
-## 11. Gate Decision
+## 14. Gate Decision
 
 必須明確說明：
 
