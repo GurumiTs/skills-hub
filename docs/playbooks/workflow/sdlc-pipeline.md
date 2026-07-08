@@ -36,6 +36,7 @@
 | Testing | `docs/playbooks/testing/dry-run.md` | `/sdlc:test` 需要 dry run、測試前置條件、Not Tested / Needs More Evidence 判斷 |
 | Testing | `docs/playbooks/testing/db-assisted-dry-run.md` | `/sdlc:test` 需要 DB read-only evidence、metadata、bounded query、BigQuery dry run 或 LookML validation evidence |
 | Testing | `docs/playbooks/testing/sdlc-dry-run-scenarios.md` | 驗證 `/sdlc:*` prompt 是否正確套用 playbook selection、Version Context、DB Hosting 分離與 dry run gate |
+| Testing | `docs/playbooks/testing/scenario-validation-execution-notes.md` | 執行 validation pack 時的 reload、scenario execution、檢查欄位、失敗回修路徑與 pass criteria |
 | Database | `docs/playbooks/database/mssql.md` | DB Platform / Dialect 是 MSSQL / SQL Server / T-SQL |
 | Database | `docs/playbooks/database/oracle.md` | DB Platform / Dialect 是 Oracle / Oracle SQL / PL/SQL |
 | Database | `docs/playbooks/database/bigquery.md` | DB Platform / Dialect 是 BigQuery / GoogleSQL |
@@ -71,7 +72,7 @@
 | command / agent / skill prompt、GEMINI.md、MCP instruction、output format | `docs/playbooks/tech-stacks/prompting.md` |
 | `/sdlc:test` dry run、Not Tested / Needs More Evidence 判斷 | `docs/playbooks/testing/dry-run.md` |
 | `/sdlc:test` 需要 DB metadata、bounded query、LookML validation evidence | `docs/playbooks/testing/db-assisted-dry-run.md` |
-| 驗證 `/sdlc:*` prompt 行為、playbook selection 或 dry run gate | `docs/playbooks/testing/sdlc-dry-run-scenarios.md` |
+| 驗證 `/sdlc:*` prompt 行為、playbook selection 或 dry run gate | `docs/playbooks/testing/sdlc-dry-run-scenarios.md`、`docs/playbooks/testing/scenario-validation-execution-notes.md` |
 | SQL Server、MSSQL、T-SQL、`.sql` 指向 SQL Server、stored procedure | `docs/playbooks/database/mssql.md` |
 | Oracle SQL、PL/SQL、schema owner、package、sequence、synonym | `docs/playbooks/database/oracle.md` |
 | BigQuery、GoogleSQL、dataset、partition、cluster、estimated scan | `docs/playbooks/database/bigquery.md` |
