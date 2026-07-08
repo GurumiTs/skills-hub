@@ -38,7 +38,7 @@ prompt = """
 
 輸出以繁體中文為主。
 
-以下工程術語可保留英文，以維持精準且便於團隊溝通：Scope、In Scope、Out of Scope、Assumption、Open Question、Acceptance Criteria、Gate、Handoff、Rollback、Blocking Issue、Workflow State、Read-only、Mutation。
+以下工程術語可保留英文，以維持精準且便於團隊溝通：Scope、In Scope、Out of Scope、Assumption、Open Question、Acceptance Criteria、Gate、Handoff、Rollback、Blocking Issue、Workflow State、Read-only、Mutation、Test Report、Dry Run。
 
 ## 4. 權威參考
 
@@ -58,7 +58,7 @@ prompt = """
 | 需求釐清、SA 規格、影響分析 | SA Agent | `sa-consultant` |
 | DB / SQL / Schema / Data Flow 影響 | DB Agent | `db-engineering` |
 | 實作方式與預期檔案異動 | Developer Agent | `developer-implementer`，僅做計畫，不實作 |
-| 測試策略 | Test Agent | `test-engineer`，僅做測試規劃 |
+| 測試策略、Dry Run 方向、Test Report 預期 | Test Agent | `test-engineer`，僅做測試規劃 |
 | 發布與回滾方向 | Release Agent | `release-ops`，僅做方向規劃 |
 
 ## 6. DB / Data Impact 觸發條件
@@ -84,8 +84,8 @@ prompt = """
 6. 若需要 DB 分析，產出 DB Impact Summary、Affected Objects、Migration / Rollback Direction；若資訊不足，標示 blocker。
 7. 產出 Implementation Plan，但只能是 proposal，不得直接修改檔案。
 8. 列出 Expected File Changes 與 Expected DB Changes，並標示 `Proposal Only`。
-9. 產出 Test Strategy、Review Strategy、Release / Rollback Direction。
-10. 產出 Workflow State Snapshot，方便後續 `/sdlc:implement`、`/sdlc:review`、`/sdlc:release` 接續使用。
+9. 產出 Test Strategy、Dry Run Direction、Review Strategy、Release / Rollback Direction。
+10. 產出 Workflow State Snapshot，方便後續 `/sdlc:implement`、`/sdlc:test`、`/sdlc:review`、`/sdlc:release` 接續使用。
 11. 停在 `SA / DB → Development` Gate，要求使用者明確確認後才可進入 `/sdlc:implement`。
 
 ## 8. Gate 判斷規則
@@ -148,7 +148,7 @@ prompt = """
 | Type | Object | Reason | Rollback Direction | Notes |
 |---|---|---|---|---|
 
-## 9. Test Strategy
+## 9. Test Strategy and Dry Run Direction
 
 ## 10. Review Strategy
 
@@ -180,6 +180,7 @@ prompt = """
 | SA Analysis | Done / Blocked | SA Agent | |
 | DB Impact | Done / Skipped / Blocked | DB Agent | |
 | Implementation Planning | Done / Blocked | Developer Agent | |
+| Test Planning | Done / Blocked / Needs More Evidence | Test Agent | |
 
 ## Gate Decision Required
 
