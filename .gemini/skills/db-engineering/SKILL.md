@@ -20,7 +20,7 @@ description: Use when the task involves database schema, SQL, migration, rollbac
 
 - 判斷 DB / Data Impact 是否存在。
 - 分析 table、column、index、view、stored procedure、function、trigger、query、report、import/export、資料同步與資料流影響。
-- 評估 data correctness、performance、compatibility、DB dialect 與 rollback risk。
+- 評估 data correctness、performance、compatibility、DB platform / dialect、DB hosting context 與 rollback risk。
 - 設計 migration plan、rollback direction 與 data validation。
 - 在需要 DB metadata 時，協助選擇正確的 `connection_key`。
 - 為 `/sdlc:test` 提供 DB-assisted dry run 的 read-only metadata / bounded evidence。
@@ -88,7 +88,8 @@ description: Use when the task involves database schema, SQL, migration, rollbac
 
 若 `/sdlc:test`、使用者 prompt、Implementation Result、SQL、LookML 或測試資料需求提到特定 table、schema、dataset、query、stored procedure、LookML explore / view，且 dry run 需要 DB evidence，必須遵守：
 
-- 先確認 DB Platform：MsSQL CloudSQL / Oracle / BigQuery / LookML / Unknown。
+- 先確認 DB Platform / Dialect：MSSQL / Oracle / BigQuery / LookML / Unknown。
+- 先確認 DB Hosting / Runtime Environment：Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Unknown / Not Applicable。
 - 先確認 connection、environment、schema / dataset / owner、資料敏感性與 read-only 可行性。
 - 優先提供 metadata / schema / column / constraint / index evidence。
 - 必要時只允許 bounded row count、existence check、limited aggregate 或 bounded sample query。
@@ -104,7 +105,8 @@ description: Use when the task involves database schema, SQL, migration, rollbac
 
 - Requirement / SA Spec：需求、資料規則、流程或 Acceptance Criteria。
 - Target System：目標系統、模組、資料庫或環境描述。
-- DB Platform / Dialect：MsSQL CloudSQL、Oracle、BigQuery、LookML / Looker 或 Unknown。
+- DB Platform / Dialect：MSSQL、Oracle、BigQuery、LookML / Looker 或 Unknown。
+- DB Hosting / Runtime Environment：Google Cloud SQL、Azure SQL、AWS RDS、VM、on-prem、Not Applicable 或 Unknown。
 - DB Objects：可能受影響的 table、column、view、SP、query、dataset、LookML view / explore。
 - Current SQL / Schema：既有 SQL、schema、metadata、migration 或 LookML。
 - Change Goal：要新增、調整、移除或修正的資料行為。
@@ -116,6 +118,7 @@ description: Use when the task involves database schema, SQL, migration, rollbac
 
 - Selected DB Metadata Connection。
 - DB Platform / Dialect。
+- DB Hosting / Runtime Environment。
 - Playbooks Used。
 - DB Impact Summary。
 - Affected Objects。
@@ -133,11 +136,11 @@ description: Use when the task involves database schema, SQL, migration, rollbac
 ## Workflow
 
 1. 判斷任務是否涉及 DB / SQL / Data Flow / LookML。
-2. 整理已知 requirement、資料規則、DB Platform 與 affected objects。
+2. 整理已知 requirement、資料規則、DB Platform、DB Hosting 與 affected objects。
 3. 若需要 DB metadata，先依 DB Connection Selection Rules 選定 `connection_key`。
 4. 只讀取與任務直接相關的 DB metadata、SQL、migration、LookML 或 data access code。
 5. 若任務是 DB-assisted dry run，優先提供 metadata 與 bounded read-only evidence。
-6. 分析 schema、SQL、data correctness、performance、compatibility、dialect 與 rollback risk。
+6. 分析 schema、SQL、data correctness、performance、compatibility、dialect、hosting constraints 與 rollback risk。
 7. 若資料規則、connection、environment、sensitivity 或 DB dialect 不清，停止並 handoff 給 SA Agent 或要求使用者確認。
 8. 若需要 DB 變更，產出 migration plan、rollback direction 與 validation method。
 9. 若 DB 變更需要對應程式調整，handoff 給 Developer Agent。
@@ -170,6 +173,8 @@ description: Use when the task involves database schema, SQL, migration, rollbac
 ## Selected DB Metadata Connection
 
 ## DB Platform / Dialect
+
+## DB Hosting / Runtime Environment
 
 ## Playbooks Used
 
