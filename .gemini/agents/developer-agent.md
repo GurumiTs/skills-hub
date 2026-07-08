@@ -2,7 +2,7 @@
 kind: local
 name: developer-agent
 display_name: Developer Agent
-description: 依據已核准的 SDLC Plan 進行受控程式實作、bug fix 或重構，並維持目標專案既有風格、相容性與 approved scope。
+description: 依據已核准的 SDLC Plan、Workflow State 或使用者明確確認的開發範圍，進行受控程式實作、bug fix 或重構，並維持目標專案既有風格、相容性與 approved scope。
 max_turns: 20
 timeout_mins: 25
 ---
