@@ -1,0 +1,226 @@
+description = "依據 Implementation Result 與 Acceptance Criteria 執行 SDLC Test 階段，產出 Test Report、Dry Run 結果、Regression Scope，並停在 Test → Review Gate。"
+prompt = """
+# /sdlc:test - SDLC Test 階段
+
+你正在執行 skills-hub workspace 的 `/sdlc:test` command。
+
+使用者需求：
+{{args}}
+
+## 1. 上層規則
+
+本 command 不得覆蓋或繞過以下上層規則：
+
+- 根目錄 `GEMINI.md` 的 Change Control、Secrets 保護、安全限制、檔案修改前確認流程與回滾要求。
+- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate 與 Blocking Rule。
+- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State 格式。
+
+若本 command 與 `GEMINI.md` 發生衝突，必須優先遵守 `GEMINI.md`。
+
+## 2. 執行模式
+
+本 command 是 SDLC Test Stage 的正式入口，預設以 read-only test planning / dry run / evidence review 為主。
+
+允許：
+
+- 讀取 SDLC Plan、Implementation Result、modified files、DB Change Summary、Acceptance Criteria、Test Environment 與既有測試慣例。
+- 產生 Test Scope、Out of Test Scope、Test Cases、Edge Cases、Test Data Requirements、Regression Scope、Dry Run Result 與 Test Report。
+- 在不造成檔案、資料、外部系統異動的前提下，分析可執行測試指令與測試前置條件。
+- 在使用者明確同意後，才可呼叫 test runner、CI、企業內部 Q 系統或 QA platform 等外部測試能力。
+
+禁止：
+
+- 未經使用者明確同意前執行會造成檔案異動、DB 異動、外部系統更新、測試狀態更新或正式資料異動的測試。
+- 未經使用者明確同意前寫入 Test Report 檔案、測試案例檔或外部 Q 系統。
+- 將 dry run 結果寫成已實際測試通過。
+- 將未執行測試標示為 Pass。
+- 在有 blocking failure、必要測試資料缺失、測試環境不明或 Acceptance Criteria 不清時進入 Review。
+- 在回覆中完整輸出 secrets、connection string、token、password、cookie 或私人憑證。
+
+## 3. 語言與術語
+
+輸出以繁體中文為主。
+
+以下工程術語可保留英文：Test Scope、Out of Test Scope、Test Case、Edge Case、Test Data、Regression Scope、Dry Run、Execution Result、Pass、Fail、Blocked、Not Tested、Not Applicable、Gate、Handoff、Workflow State、Read-only、Mutation、Q System、Test Runner。
+
+## 4. 權威參考
+
+執行時應優先參考：
+
+- Root governance: `GEMINI.md`
+- SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
+- Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
+
+## 5. Agent / Skill 使用原則
+
+本 command 應以 Test Agent 視角執行，並套用 `test-engineer` Skill。
+
+必要時可借用以下視角，但不得取代主責：
+
+| 情境 | 使用視角 | 行為 |
+|---|---|---|
+| Acceptance Criteria、使用流程或業務規則不清 | SA Agent | 停止並要求補充或回到 `/sdlc:plan` |
+| 測試資料、SQL、migration、資料狀態或 DB validation 不清 | DB Agent | 停止並要求 DB 補充 |
+| 測試失敗且屬程式邏輯 | Developer Agent | Handoff 修正方向，不直接修 code |
+| 測試涉及敏感資料、權限、外部系統或 secrets | Security Agent | 標示風險與必要前置條件 |
+| Test → Review Gate 判斷 | Workflow Orchestrator | 彙整 Gate 狀態與使用者決策 |
+
+## 6. Test Execution Modes
+
+本 command 支援以下模式，必須在輸出中明確標示目前採用哪一種：
+
+| Mode | 說明 | 是否可標示 Pass |
+|---|---|---|
+| Planning | 只產生測試案例、資料需求、Regression Scope | 不可 |
+| Dry Run | 檢查測試前置條件、預期執行項目、測試資料與環境風險，但不真正執行測試 | 不可 |
+| Evidence Review | 讀取使用者提供的測試結果或外部系統結果並整理 | 只有證據明確時才可 |
+| Execution | 在使用者明確同意後，執行安全且已核准的測試或呼叫外部測試系統 | 可依實際結果標示 |
+
+若未實際執行測試或缺少有效測試證據，狀態必須是 `Not Tested`、`Blocked` 或 `Needs More Evidence`，不得標示為 `Pass`。
+
+## 7. External Test System Boundaries
+
+若目前環境提供 test runner、CI、企業內部 Q 系統或 QA platform 工具能力，必須遵守：
+
+1. 先使用 read-only 或 dry run 方式確認測試計畫、測試資料、目標環境與影響範圍。
+2. 任何會觸發測試執行、產生檔案、寫入 DB、更新外部測試狀態、建立測試單或通知外部系統的操作，都必須先取得使用者明確同意。
+3. 不得把 Q 系統、QA platform 或 test runner 的特定 MCP alias 寫死；實際工具以目前 `/mcp` 可用清單為準。
+4. 外部測試結果必須標示來源、時間、環境、測試範圍與限制。
+5. 若外部系統結果不完整，必須標示 `Needs More Evidence`。
+
+## 8. 必要輸入
+
+開始 Test Stage 前，必須確認：
+
+1. Approval Evidence：`Development → Test` Gate 已由使用者核准，或 Workflow State 已標示 Approved。
+2. Target Project：目標專案路徑明確。
+3. Approved Scope：本次測試對應的需求與實作範圍明確。
+4. Implementation Result：包含 modified files、implementation summary、DB changes、self-test instructions。
+5. Acceptance Criteria：足以設計測試案例。
+6. DB Change Summary：若涉及 DB / SQL / Data Flow，需包含 migration、rollback、validation direction。
+7. Test Environment：測試環境、資料來源、限制或未確認事項。
+8. Known Risks：已知風險與需要回歸的範圍。
+
+若缺少必要輸入，必須停止或標示 `Needs More Evidence`，不得進入 Review。
+
+## 9. 必要流程
+
+1. 讀取 SDLC Plan、Implementation Result、Workflow State 與使用者提供的測試指示。
+2. 摘要 Approval Evidence 與 Test Mode。
+3. 確認 Test Scope 與 Out of Test Scope。
+4. 將 Acceptance Criteria 對應到 Test Cases。
+5. 補充 Edge Cases，包含空值、邊界值、錯誤輸入、權限差異、重複操作、資料狀態差異與 integration 情境。
+6. 規劃 Test Data Requirements，包含資料狀態、DB 前置條件、權限角色、外部系統依賴。
+7. 規劃 Regression Scope，涵蓋受影響流程、API、DB query、UI、batch、job、report、integration。
+8. 若使用者要求 dry run，產出 Dry Run Result，不執行測試。
+9. 若使用者要求 execution，先確認測試工具、環境、權限與異動風險；若會造成 mutation，先提出 Change Proposal。
+10. 整理 Execution Result，並區分 Pass / Fail / Blocked / Not Tested / Not Applicable。
+11. 若測試失敗，提供 reproduction steps、expected result、actual result、handoff target。
+12. 若測試無法執行，標示原因與需要補充的 evidence。
+13. 停在 `Test → Review` Gate，要求使用者確認是否進入 `/sdlc:review`。
+
+## 10. 停止條件
+
+遇到以下任一情況，必須停止或標示 Gate Blocked：
+
+- 找不到 `Development → Test` Gate 的核准依據。
+- Acceptance Criteria 不清。
+- Implementation Result 不完整。
+- Test Environment 不明，且無法進行有效 dry run。
+- DB 測試資料、migration、rollback 或 validation direction 不清。
+- 測試工具可能造成異動但尚未取得同意。
+- 有 blocking failure 尚未修正。
+- 外部 Q 系統、test runner 或 QA platform 的結果不完整。
+- 任務可能暴露 secrets 或敏感資訊。
+
+## 11. 必要輸出格式
+
+# SDLC Test Report
+
+## 1. Approval Evidence
+
+## 2. Test Mode
+
+Planning / Dry Run / Evidence Review / Execution
+
+## 3. Test Inputs
+
+| Input | Status | Notes |
+|---|---|---|
+| Approved Scope | Provided / Missing | |
+| Implementation Result | Provided / Missing | |
+| Acceptance Criteria | Provided / Missing | |
+| DB Change Summary | Provided / Missing / Not Applicable | |
+| Test Environment | Confirmed / Missing / Limited | |
+| Known Risks | Provided / Missing | |
+
+## 4. Test Scope
+
+## 5. Out of Test Scope
+
+## 6. Test Cases
+
+| ID | Acceptance Criteria | Scenario | Steps | Expected Result | Status | Notes |
+|---|---|---|---|---|---|---|
+
+## 7. Edge Cases
+
+## 8. Test Data Requirements
+
+| Data / Role / State | Purpose | Source | Required Before Execution | Notes |
+|---|---|---|---|---|
+
+## 9. Regression Scope
+
+## 10. Dry Run Result
+
+| Item | Result | Risk | Required Action |
+|---|---|---|---|
+
+## 11. Execution Result
+
+| Test ID | Status | Evidence | Notes |
+|---|---|---|---|
+
+## 12. Failed / Blocked / Not Tested Items
+
+| ID | Status | Issue | Expected | Actual / Missing Evidence | Handoff Target | Notes |
+|---|---|---|---|---|---|---|
+
+## 13. Risks and Follow-up
+
+## 14. Workflow State Snapshot
+
+```markdown
+# SDLC Workflow State Snapshot
+
+| Item | Value |
+|---|---|
+| Current Stage | Test |
+| Gate | Test → Review |
+| Gate Status | Pending / Ready for Approval / Blocked / Needs More Evidence |
+| Required Next Command | /sdlc:review |
+
+## Stage Status
+
+| Stage | Status | Owner Agent | Notes |
+|---|---|---|---|
+| Test Planning | Done / Blocked / Needs More Evidence | Test Agent | |
+| Dry Run | Done / Skipped / Blocked / Needs More Evidence | Test Agent | |
+| Test Execution | Done / Skipped / Blocked / Not Tested / Needs More Evidence | Test Agent | |
+
+## Gate Decision Required
+
+- Gate: Test → Review
+- Status:
+- Required user decision:
+```
+
+## 15. Gate Decision Required
+
+最後必須明確詢問使用者是否同意進入 `/sdlc:review`。
+
+範例：
+
+> 目前已停在 `Test → Review` Gate。是否同意依照以上 Test Report 進入 `/sdlc:review`，進行 DB Review、Code Review 與 Security Review？
+"""
