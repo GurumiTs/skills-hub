@@ -85,7 +85,7 @@ description: Use when the task requires SDLC test planning, version-aware dry ru
 
 - SA Spec / Acceptance Criteria：驗收條件與需求範圍。
 - Implementation Result：實作內容、modified files、self-test instructions。
-- Project / Version Context：runtime、framework、language、dependency、DB dialect、build target 或其缺口。
+- Project / Version Context：runtime、framework、language、dependency、DB platform / dialect、DB hosting、build target 或其缺口。
 - Playbooks Used：已參考的 workflow / tech stack / DB / testing playbooks，以及缺失狀態。
 - DB Change Summary：若涉及 DB，需包含 migration、rollback、validation direction。
 - Test Environment：測試環境、資料來源、限制。
@@ -133,7 +133,7 @@ description: Use when the task requires SDLC test planning, version-aware dry ru
 - PowerShell：必須區分 Windows PowerShell 5.1 與 PowerShell 7+ 行為差異。
 - Java：測試設計必須符合 JDK、Maven / Gradle、JUnit / framework version。
 - Prompting：測試案例應檢查 role boundary、輸出格式、工具使用限制與安全邊界。
-- DB / BI：測試資料與 validation 必須符合 MsSQL CloudSQL、Oracle、BigQuery 或 LookML dialect。
+- DB / BI：測試資料與 validation 必須符合 MSSQL、Oracle、BigQuery 或 LookML dialect；Google Cloud SQL 等代管環境應記錄為 DB Hosting，不得混入 DB Platform。
 
 若 Version Context 會影響測試但不可判斷，必須標示 `Needs More Evidence`。
 
@@ -141,7 +141,7 @@ description: Use when the task requires SDLC test planning, version-aware dry ru
 
 若任務涉及 DB table、schema、dataset、query、stored procedure、LookML explore / view，且 dry run 需要 DB evidence：
 
-1. Test Agent 必須 handoff 給 DB Agent 判斷 connection、environment、DB platform、read-only 可行性與資料敏感性。
+1. Test Agent 必須 handoff 給 DB Agent 判斷 connection、environment、DB platform、DB hosting、read-only 可行性與資料敏感性。
 2. 優先使用 metadata / schema / column / constraint / index evidence。
 3. 必要時只接受 bounded row count、existence check、limited aggregate 或 bounded sample evidence。
 4. sample evidence 不得包含敏感欄位完整值，不得使用 `SELECT *`，必須限制筆數。
@@ -214,7 +214,8 @@ Planning / Dry Run / DB-assisted Dry Run / Evidence Review / Execution
 | Runtime / Framework Version | | | |
 | Language Version | | | |
 | Dependency Source | | | |
-| DB Platform | | | |
+| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
 | Version Risk | None / Low / Medium / High / Needs More Evidence | | |
 
 ## Playbooks Used
