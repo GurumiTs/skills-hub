@@ -42,6 +42,69 @@
 
 若任務涉及的技術棧或平台 playbook 尚未建立，必須在 `Playbooks Used` 標示 `Missing` 或 `Needs More Evidence`，不得假裝已參考。
 
+## Playbook Selection Rules
+
+所有 command、agent、skill 在輸出 `Playbooks Used` 時，必須依實際 evidence 選用 playbook。不得只因使用者提到單一關鍵字就忽略其他必要 playbook，也不得把尚未使用的 playbook 標示為 `Used`。
+
+### Selection Principles
+
+| 原則 | 說明 |
+|---|---|
+| Evidence first | 依檔案、副檔名、manifest、framework、DB dialect、使用者 prompt 或 Workflow State 判斷 |
+| Multi-playbook allowed | 同一任務可以列多份 playbook，例如 WebForms 同時需要 C#、ASP.NET Framework、WebForms |
+| Missing is explicit | 若必要 playbook 尚未建立或未讀取，必須標示 `Missing` 或 `Needs More Evidence` |
+| No fake routing | 不得宣稱 Gemini CLI 自動 routing；selection 是本 repo prompt convention |
+| Version before practice | 若版本不明，不得套用最新版慣例，只能標示風險或要求 evidence |
+
+### Common Selection Matrix
+
+| Evidence / Context | Required Playbooks |
+|---|---|
+| 任務是 SDLC command 或需要 Gate / Handoff | `docs/playbooks/workflow/sdlc-pipeline.md`、`docs/playbooks/workflow/workflow-state.md` |
+| `.cs`、`.csproj`、`.sln`、C# service / job / class library | `docs/playbooks/tech-stacks/csharp.md` |
+| `web.config`、ASP.NET Framework、IIS、MVC 5、Web API 2 | `docs/playbooks/tech-stacks/csharp.md`、`docs/playbooks/tech-stacks/aspnet-framework.md` |
+| `.aspx`、`.ascx`、`.master`、code-behind、ViewState、PostBack | `docs/playbooks/tech-stacks/csharp.md`、`docs/playbooks/tech-stacks/aspnet-framework.md`、`docs/playbooks/tech-stacks/webforms.md` |
+| `requirements.txt`、`pyproject.toml`、Python script / job / service | `docs/playbooks/tech-stacks/python.md` |
+| `.ps1`、`.psm1`、`.psd1`、Windows operation / deployment helper | `docs/playbooks/tech-stacks/powershell.md` |
+| `pom.xml`、`build.gradle`、Java service / batch / JAR / WAR | `docs/playbooks/tech-stacks/java.md` |
+| command / agent / skill prompt、GEMINI.md、MCP instruction、output format | `docs/playbooks/tech-stacks/prompting.md` |
+| `/sdlc:test` dry run、Not Tested / Needs More Evidence 判斷 | `docs/playbooks/testing/dry-run.md` |
+| `/sdlc:test` 需要 DB metadata、bounded query、LookML validation evidence | `docs/playbooks/testing/db-assisted-dry-run.md` |
+| SQL Server、MSSQL、T-SQL、`.sql` 指向 SQL Server、stored procedure | `docs/playbooks/database/mssql.md` |
+| Oracle SQL、PL/SQL、schema owner、package、sequence、synonym | `docs/playbooks/database/oracle.md` |
+| BigQuery、GoogleSQL、dataset、partition、cluster、estimated scan | `docs/playbooks/database/bigquery.md` |
+| LookML、Looker model / view / explore / dashboard impact | `docs/playbooks/bi/lookml.md`；若有 upstream DB SQL，也要加對應 DB playbook |
+
+### Required Output Behavior
+
+在 `Playbooks Used` 中：
+
+- `Status = Used` 只能表示該 playbook 已被實際讀取或由 command 明確注入。
+- `Status = Missing` 表示依 evidence 應使用，但目前不存在或未被提供。
+- `Status = Needs More Evidence` 表示需要更多檔案、版本、DB、環境或外部系統資訊才能判斷是否適用。
+- `Status = Not Applicable` 表示該 area 經判斷不適用，必須說明理由。
+
+### Examples
+
+#### WebForms change
+
+| Area | Playbook | Selection Reason | Status |
+|---|---|---|---|
+| Workflow | `docs/playbooks/workflow/sdlc-pipeline.md` | SDLC Gate / Handoff | Used |
+| Workflow | `docs/playbooks/workflow/workflow-state.md` | Workflow State Snapshot | Used |
+| Tech Stack | `docs/playbooks/tech-stacks/csharp.md` | `.aspx.cs` code-behind uses C# | Used |
+| Tech Stack | `docs/playbooks/tech-stacks/aspnet-framework.md` | WebForms runs on ASP.NET Framework / IIS | Used |
+| Tech Stack | `docs/playbooks/tech-stacks/webforms.md` | `.aspx` / ViewState / PostBack lifecycle affected | Used |
+| Testing | `docs/playbooks/testing/dry-run.md` | Test stage requires dry run before execution | Used |
+
+#### LookML with BigQuery upstream
+
+| Area | Playbook | Selection Reason | Status |
+|---|---|---|---|
+| BI / Semantic Layer | `docs/playbooks/bi/lookml.md` | LookML model / explore affected | Used |
+| Database | `docs/playbooks/database/bigquery.md` | Upstream SQL dialect is BigQuery / GoogleSQL | Used |
+| Testing | `docs/playbooks/testing/db-assisted-dry-run.md` | Validation needs read-only evidence / dry run | Used |
+
 ## Core Principles
 
 | 原則 | 說明 |
