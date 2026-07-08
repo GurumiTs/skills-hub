@@ -1,4 +1,4 @@
-description = "執行 SDLC Review 階段：測試檢查、DB Review、Code Review、Security Review 與 Gate 判斷。"
+description = "依據 Test Report 執行 SDLC Review 階段：DB Review、Code Review、Security Review 與 Gate 判斷。"
 prompt = """
 # /sdlc:review - SDLC Review 階段
 
@@ -19,19 +19,20 @@ prompt = """
 
 ## 2. 執行模式
 
-本 command 以 read-only review 為主。
+本 command 以 read-only review 為主，前置輸入必須包含 `/sdlc:test` 產出的 Test Report，或使用者提供的等效測試證據。
 
 允許：
 
-- 讀取 implementation summary、modified files、git diff、測試結果、DB 變更、設定檔與相關文件。
-- 執行不會造成檔案或資料異動的檢查。
-- 提出 blocking / non-blocking findings、修正建議、測試建議、release gate 判斷。
+- 讀取 implementation summary、modified files、git diff、Test Report、DB 變更、設定檔與相關文件。
+- 檢查 Test Report 是否足以支撐 review gate。
+- 執行不會造成檔案或資料異動的 review 檢查。
+- 提出 blocking / non-blocking findings、修正建議、release gate 判斷。
 
 禁止：
 
 - 未經使用者明確同意前修改檔案、套用修正、格式化程式、更新 package 或產生實體文件。
 - 執行 destructive command、DB mutation、production command 或部署。
-- 將未執行測試標示為 pass。
+- 將缺少 Test Report、未執行測試或缺少測試證據的項目標示為 pass。
 - 在 high-risk 或 blocking issue 未解決時建議 release。
 - 在回覆中完整輸出 secrets、connection string、token、password、cookie 或私人憑證。
 
@@ -39,7 +40,7 @@ prompt = """
 
 輸出以繁體中文為主。
 
-以下工程術語可保留英文：Review Scope、Test Report、DB Review、Code Review、Security Review、Blocking Issue、High Risk、Medium、Low、Suggestion、Gate Decision、Not Tested、Not Applicable、Rollback。
+以下工程術語可保留英文：Review Scope、Test Report、Test Evidence、DB Review、Code Review、Security Review、Blocking Issue、High Risk、Medium、Low、Suggestion、Gate Decision、Not Tested、Not Applicable、Rollback、Needs More Evidence。
 
 ## 4. 權威參考
 
@@ -55,7 +56,7 @@ prompt = """
 
 | Review 區塊 | Agent 視角 | Skill 能力 | 必要性 |
 |---|---|---|---|
-| Test Review | Test Agent | `test-engineer` | 必須執行，至少判斷測試證據是否足夠 |
+| Test Report Evidence Check | Test Agent / Workflow Orchestrator | `test-engineer`，只檢查證據完整性，不重做完整 Test Stage | 必須執行 |
 | DB Review | DB Agent | `db-engineering` | 只要涉及 DB / SQL / Data Flow 就必須執行 |
 | Code Review | Review Agent | `code-reviewer` | 必須執行 |
 | Security Review | Security Agent | `security-reviewer` | 必須執行 |
@@ -68,14 +69,26 @@ prompt = """
 1. Approved Scope。
 2. Modified Files。
 3. DB Changes。
-4. Test Evidence。
-5. Self-test Instructions。
+4. Test Report。
+5. Test Evidence。
 6. Known Risks。
-7. 是否有未完成或超出 scope 的變更。
+7. Workflow State。
+8. 是否有未完成或超出 scope 的變更。
 
 若無法判斷 review scope，必須將 Gate 狀態標示為 `Blocked`，不得進入 release。
 
-## 7. DB Review 觸發條件
+## 7. Test Report 前置條件
+
+進入 DB / Code / Security Review 前，必須先檢查 Test Report：
+
+- 是否來自 `/sdlc:test` 或使用者提供的等效測試證據。
+- 是否包含 Test Scope、Test Cases、Test Data、Regression Scope、Execution Result。
+- 是否有 Failed、Blocked、Not Tested 或 Needs More Evidence 項目。
+- 是否對每一項 Acceptance Criteria 至少有對應測試案例，或明確標示無法測試原因。
+
+若 Test Report 缺失、主要測試未執行、或存在 unresolved blocking failure，必須停止並標示 Gate `Blocked` 或 `Needs More Evidence`。
+
+## 8. DB Review 觸發條件
 
 只要本次變更涉及以下任一項，就必須執行 DB Review：
 
@@ -88,7 +101,7 @@ prompt = """
 
 若變更看似不涉及 DB，也要在輸出中明確寫出 `DB Review: Not Applicable` 與理由。
 
-## 8. Finding 分級規則
+## 9. Finding 分級規則
 
 Findings 必須使用以下分級：
 
@@ -100,18 +113,18 @@ Findings 必須使用以下分級：
 | Low | 小型可維護性、命名、文件或非關鍵問題 | 可進入 release |
 | Suggestion | 建議優化，不影響本次 Gate | 可進入 release |
 
-## 9. 必要流程
+## 10. 必要流程
 
 1. 確認 review scope 與輸入資料是否足夠。
-2. 執行 Test Review：檢查測試案例、測試資料、執行結果與 not-tested 項目。
+2. 檢查 Test Report evidence；若缺失、不完整或存在 blocking failure，停止。
 3. 判斷是否需要 DB Review；若需要，檢查 SQL、migration、data validation、transaction、locking、performance、rollback。
 4. 執行 Code Review：檢查正確性、需求符合度、可維護性、相容性、例外處理、專案風格與 regression risk。
-5. 執行 Security Review：檢查 secrets、敏感資料、injection、auth / authorization、configuration、dependency、deployment risk。
+5. 執行 Security Review：檢查 sensitive data、input validation、permission and access control、configuration and dependency、error handling and logging risk。
 6. 彙整 Blocking / High / Medium / Low / Suggestion findings。
 7. 根據 findings 判斷是否可進入 `/sdlc:release`。
 8. 停在 `Security → Release` Gate，要求使用者確認下一步。
 
-## 10. 必要輸出格式
+## 11. 必要輸出格式
 
 # SDLC Review Report
 
@@ -124,19 +137,21 @@ Findings 必須使用以下分級：
 | Approved Scope | | |
 | Modified Files | | |
 | DB Changes | | |
+| Test Report | | |
 | Test Evidence | | |
-| Self-test Instructions | | |
 | Workflow State | | |
 
-## 3. Test Review
+## 3. Test Report Evidence Check
 
-### 3.1 Test Scope
+### 3.1 Test Scope Evidence
 
-### 3.2 Test Evidence
+### 3.2 Test Cases Evidence
 
-### 3.3 Not Tested Items
+### 3.3 Execution Result Evidence
 
-### 3.4 Test Review Decision
+### 3.4 Failed / Blocked / Not Tested Items
+
+### 3.5 Test Evidence Decision
 
 Decision: Pass / Blocked / Not Tested / Needs More Evidence
 
@@ -176,15 +191,17 @@ Decision: Pass / Blocked / Needs More Evidence
 
 ## 6. Security Review
 
-### 6.1 Secrets / Sensitive Data
+### 6.1 Sensitive Data Review
 
-### 6.2 Injection Risks
+### 6.2 Input Validation Review
 
-### 6.3 Auth / Authorization Risks
+### 6.3 Permission and Access Control Review
 
-### 6.4 Configuration / Dependency Risks
+### 6.4 Configuration and Dependency Review
 
-### 6.5 Security Review Decision
+### 6.5 Error Handling and Logging Review
+
+### 6.6 Security Review Decision
 
 Decision: Pass / Blocked / High Risk / Needs More Evidence
 
@@ -206,17 +223,17 @@ Decision: Pass / Blocked / High Risk / Needs More Evidence
 |---|---|
 | Current Stage | Review |
 | Gate | Security → Release |
-| Gate Status | Pending / Ready for Approval / Blocked |
+| Gate Status | Pending / Ready for Approval / Blocked / Needs More Evidence |
 | Required Next Command | /sdlc:release |
 
 ## Stage Status
 
 | Stage | Status | Owner Agent | Notes |
 |---|---|---|---|
-| Test Review | Done / Blocked / Needs Evidence | Test Agent | |
-| DB Review | Done / Skipped / Blocked / Needs Evidence | DB Agent | |
-| Code Review | Done / Blocked / Needs Evidence | Review Agent | |
-| Security Review | Done / Blocked / Needs Evidence | Security Agent | |
+| Test Evidence Check | Done / Blocked / Needs More Evidence | Test Agent / Workflow Orchestrator | |
+| DB Review | Done / Skipped / Blocked / Needs More Evidence | DB Agent | |
+| Code Review | Done / Blocked / Needs More Evidence | Review Agent | |
+| Security Review | Done / Blocked / Needs More Evidence | Security Agent | |
 
 ## Gate Decision Required
 
