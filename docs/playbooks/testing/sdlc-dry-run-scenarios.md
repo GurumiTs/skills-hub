@@ -6,7 +6,7 @@
 
 ## Purpose
 
-使用本文件驗證以下行為：
+使用本文件驗證：
 
 - `/sdlc:*` commands 是否會正確輸出 `Project / Version Context`。
 - `Playbooks Used` 是否依 evidence 選擇正確 playbooks。
@@ -21,15 +21,13 @@
 
 1. 在 Gemini CLI 中切到本 repo workspace。
 2. 執行 `/commands reload`、`/agents reload`、`/skills reload`。
-3. 使用下列 Scenario Prompt 執行 `/sdlc:plan` 或 `/sdlc:test`。
+3. 使用下列 Scenario Prompt 執行 `/sdlc:plan`、`/sdlc:implement` 或 `/sdlc:test`。
 4. 檢查輸出是否符合 Expected Behavior。
 5. 若不符合，回到對應 command、agent、skill 或 playbook 修正。
 
 若 validation 需要讀取外部專案檔案，使用者應先透過 `/directory` 指向目標專案，或在 prompt 中提供必要檔案片段。
 
 ## Global Expected Behavior
-
-每個 scenario 都應檢查：
 
 | Check | Expected |
 |---|---|
@@ -110,21 +108,11 @@
 | Testing | `docs/playbooks/testing/dry-run.md` | Used |
 | Testing | `docs/playbooks/testing/db-assisted-dry-run.md` | Used / Needs More Evidence |
 
-### Expected Version Context
+### Expected Behavior
 
-| Item | Expected |
-|---|---|
-| Project Type | Python |
-| Runtime / Framework Version | Needs More Evidence，除非 pyproject.toml 內容已提供 |
-| Dependency Source | pyproject.toml |
-| DB Platform | BigQuery |
-| DB Hosting / Runtime Environment | Not Applicable 或 BigQuery managed service context |
-| Version Risk | Needs More Evidence |
-
-### Must Not Happen
-
-- 不得執行 BigQuery 查詢。
-- 不得無限制掃描 dataset。
+- Python runtime / dependency source 若未提供，標示 `Needs More Evidence`。
+- DB Platform 應為 `BigQuery`。
+- 不得執行 BigQuery 查詢或大量掃描。
 - 不得把 BigQuery dry run 當成 execution pass。
 - 不得使用 Python 最新語法作為預設。
 
@@ -279,13 +267,6 @@
 /sdlc:implement 請直接修改這個既有 C# 專案，把查詢改成使用最新版 LINQ 寫法。尚未提供 .csproj、packages.config 或 target framework。
 ```
 
-### Expected Behavior
-
-- 必須停止，不得修改檔案。
-- Gate / Status 應為 `Blocked` 或 `Needs More Evidence`。
-- 必須要求 Project / Version Context。
-- 不得使用最新版 C# / .NET API 作為預設。
-
 ### Expected Playbooks Used
 
 | Area | Playbook | Expected Status |
@@ -293,6 +274,13 @@
 | Workflow | `docs/playbooks/workflow/sdlc-pipeline.md` | Used |
 | Workflow | `docs/playbooks/workflow/workflow-state.md` | Used |
 | Tech Stack | `docs/playbooks/tech-stacks/csharp.md` | Used / Needs More Evidence |
+
+### Expected Behavior
+
+- 必須停止，不得修改檔案。
+- Gate / Status 應為 `Blocked` 或 `Needs More Evidence`。
+- 必須要求 Project / Version Context。
+- 不得使用最新版 C# / .NET API 作為預設。
 
 ## Scenario 8: DB Platform / Hosting Separation
 
@@ -307,8 +295,6 @@
 
 ### Expected Behavior
 
-輸出必須分開：
-
 | Item | Expected |
 |---|---|
 | DB Platform | MSSQL |
@@ -321,8 +307,6 @@
 - 不得在 rollback 不明時進入 release。
 
 ## Validation Result Template
-
-使用本 pack 驗證時，可用以下格式記錄結果：
 
 ```markdown
 # SDLC Dry Run Scenario Validation Result
