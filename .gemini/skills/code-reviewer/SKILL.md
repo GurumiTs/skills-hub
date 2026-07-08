@@ -71,7 +71,7 @@ description: Use when the task requires reviewing code changes, git diffs, imple
 - Approved Scope：本次核准範圍。
 - Modified Files / Diff：變更檔案或差異。
 - Implementation Summary：實作摘要。
-- Project / Version Context：runtime、framework、language、dependency、DB dialect 或其缺口。
+- Project / Version Context：runtime、framework、language、dependency、DB platform / dialect、DB hosting 或其缺口。
 - Playbooks Used：已參考的 workflow / tech stack / DB / review playbooks，以及缺失狀態。
 - Acceptance Criteria：需求驗收條件。
 - Test Report：測試結果、dry run、DB-assisted dry run 或 Not Tested 項目。
@@ -103,7 +103,7 @@ description: Use when the task requires reviewing code changes, git diffs, imple
 - PowerShell：檢查 Windows PowerShell 5.1 與 PowerShell 7+ 相容性差異。
 - Java：檢查 JDK、Maven / Gradle、framework version 與 API 相容性。
 - Prompting：檢查 prompt role boundary、工具邊界與輸出格式是否符合 repository 設計。
-- DB / BI：檢查 MsSQL CloudSQL、Oracle、BigQuery、LookML dialect 或資料流相容性。
+- DB / BI：檢查 MSSQL、Oracle、BigQuery、LookML dialect 或資料流相容性；Google Cloud SQL 等代管環境應記錄為 DB Hosting，不得混入 DB Platform。
 
 ## Workflow
 
@@ -164,7 +164,8 @@ description: Use when the task requires reviewing code changes, git diffs, imple
 | Runtime / Framework Version | | | |
 | Language Version | | | |
 | Dependency Source | | | |
-| DB Platform | | | |
+| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
 | Version Risk | None / Low / Medium / High / Needs More Evidence | | |
 
 ## Playbooks Used
