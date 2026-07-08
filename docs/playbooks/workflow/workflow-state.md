@@ -46,7 +46,10 @@ Gate Status: Needs More Evidence / Blocked
 - `pom.xml`、`build.gradle`。
 - `.psd1`、`.psm1`、PowerShell module manifest。
 - DB connection hint、SQL dialect、schema metadata、LookML model / explore / view。
+- DB hosting / runtime environment，例如 Google Cloud SQL、Azure SQL、AWS RDS、VM、on-prem。
 - CI / deployment / runtime 設定。
+
+DB Platform 與 DB Hosting 必須分開記錄。`MSSQL`、`Oracle`、`BigQuery` 是 DB platform / dialect；`Google Cloud SQL` 是 hosting / managed service context，不應寫成 `MSSQL CloudSQL`。
 
 ## Playbook Reference Rule
 
@@ -97,7 +100,8 @@ Gate Status: Needs More Evidence / Blocked
 | Language Version | | | |
 | Dependency Source | NuGet / pip / Maven / Gradle / PowerShell module / Other | | |
 | Build / Deployment Target | | | |
-| DB Platform | MsSQL CloudSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
 | BI / Semantic Layer | LookML / Looker / Not Applicable / Unknown | | |
 | Version Risk | None / Low / Medium / High / Needs More Evidence | | |
 
