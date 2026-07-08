@@ -24,7 +24,7 @@ prompt = """
 允許：
 
 - 整理 release package、deployment steps、post-deployment validation、rollback plan、UAT checklist、handover / runbook notes。
-- 依據 review report 判斷 release 前置條件是否完整。
+- 依據 test report 與 review report 判斷 release 前置條件是否完整。
 - 提出 release 前需要補強的事項。
 
 禁止：
@@ -40,7 +40,7 @@ prompt = """
 
 輸出以繁體中文為主。
 
-以下工程術語可保留英文：Release Package、Deployment Steps、Post-deployment Validation、Rollback Plan、UAT Checklist、Handover、Runbook、Preconditions、Blocking Issue、High Risk、Gate Decision。
+以下工程術語可保留英文：Release Package、Deployment Steps、Post-deployment Validation、Rollback Plan、UAT Checklist、Handover、Runbook、Preconditions、Test Report、Blocking Issue、High Risk、Gate Decision、Needs More Evidence。
 
 ## 4. 權威參考
 
@@ -59,6 +59,7 @@ prompt = """
 | 情境 | 使用視角 | 行為 |
 |---|---|---|
 | 驗收標準或 UAT 情境不清 | SA Agent / Test Agent | 標示 open question，不自行補業務規則 |
+| Test Report 不完整或存在 blocking failure | Test Agent | 標示 blocking 或 Needs More Evidence，不建議 release |
 | DB rollback 或 migration 不完整 | DB Agent | 標示 blocking，不建議 release |
 | Review gate 有 blocking / high-risk | Workflow Orchestrator | 停止 release |
 | 發現部署、設定、權限或 secrets 風險 | Security Agent | 標示風險與必要前置條件 |
@@ -67,13 +68,15 @@ prompt = """
 
 產生 Release Package 前，必須先確認：
 
-1. Review Scope 清楚。
-2. Test Review 狀態已知。
-3. DB Review 狀態已知；若有 DB 變更，rollback 可行。
-4. Code Review 無 blocking issue。
-5. Security Review 無 unresolved high-risk issue。
-6. Deployment target / environment 已明確，或已標示為待確認。
-7. Rollback owner、驗證方式與失敗時排查方向已列出。
+1. Approved Scope 清楚。
+2. Implementation Result 已知。
+3. Test Report 已知，且無 unresolved blocking failure。
+4. Review Scope 清楚。
+5. DB Review 狀態已知；若有 DB 變更，rollback 可行。
+6. Code Review 無 blocking issue。
+7. Security Review 無 unresolved high-risk issue。
+8. Deployment target / environment 已明確，或已標示為待確認。
+9. Rollback owner、驗證方式與失敗時排查方向已列出。
 
 若前置條件不足，Release Gate 必須標示 `Blocked` 或 `Needs More Evidence`。
 
@@ -93,15 +96,15 @@ Rollback Plan 必須依實際變更拆成以下層次，不得只寫「還原版
 
 ## 8. 必要流程
 
-1. 讀取或整理 change summary、implementation result、test result、DB review、code review、security review。
-2. 檢查是否存在 blocking 或 high-risk unresolved issue。
+1. 讀取或整理 change summary、implementation result、test report、DB review、code review、security review。
+2. 檢查是否存在 blocking、high-risk unresolved issue 或 incomplete test evidence。
 3. 若存在阻塞，停止並輸出缺口，不得產生可部署結論。
 4. 整理 release preconditions。
 5. 產生 deployment steps，並標示每一步是否需要人工確認。
 6. 產生 DB deployment steps；若無 DB 變更，明確標示不適用。
-7. 產生 post-deployment validation，並對應 Acceptance Criteria。
+7. 產生 post-deployment validation，並對應 Acceptance Criteria、Test Report 與 known risks。
 8. 產生 rollback plan，包含 code / DB / config / deployment / operation。
-9. 產生 UAT checklist，對應需求與驗收標準。
+9. 產生 UAT checklist，對應需求、驗收標準與 Test Report 補強點。
 10. 產生 handover / runbook notes，包含監控點、常見異常、排查方向與追蹤事項。
 11. 停在 `Release → UAT` Gate 或 `UAT → Handover` Gate，依任務狀態要求使用者確認。
 
@@ -115,18 +118,21 @@ Rollback Plan 必須依實際變更拆成以下層次，不得只寫「還原版
 
 | Item | Status | Evidence / Notes |
 |---|---|---|
-| Test Review | Pass / Blocked / Needs Evidence | |
-| DB Review | Pass / Not Applicable / Blocked / Needs Evidence | |
-| Code Review | Pass / Blocked / Needs Evidence | |
-| Security Review | Pass / Blocked / High Risk / Needs Evidence | |
+| Approved Scope | Ready / Missing | |
+| Implementation Result | Ready / Missing | |
+| Test Report | Pass / Blocked / Not Tested / Needs More Evidence | |
+| DB Review | Pass / Not Applicable / Blocked / Needs More Evidence | |
+| Code Review | Pass / Blocked / Needs More Evidence | |
+| Security Review | Pass / Blocked / High Risk / Needs More Evidence | |
 | Rollback Plan | Ready / Incomplete | |
+| Deployment Target | Confirmed / Missing | |
 
 ## 3. Deployment Scope
 
 ## 4. Deployment Steps
 
-| Step | Action | Owner | Validation | Risk |
-|---|---|---|---|---|
+| Step | Action | Target | Owner | Validation | Risk | Rollback Point |
+|---|---|---|---|---|---|---|
 
 ## 5. DB Deployment Steps
 
@@ -181,14 +187,14 @@ Rollback Plan 必須依實際變更拆成以下層次，不得只寫「還原版
 |---|---|
 | Current Stage | Release Planning |
 | Gate | Release → UAT / UAT → Handover |
-| Gate Status | Pending / Ready for Approval / Blocked |
+| Gate Status | Pending / Ready for Approval / Blocked / Needs More Evidence |
 | Required Next Step | UAT / Handover / Fix blocking issues |
 
 ## Stage Status
 
 | Stage | Status | Owner Agent | Notes |
 |---|---|---|---|
-| Release Planning | Done / Blocked / Needs Evidence | Release Agent | |
+| Release Planning | Done / Blocked / Needs More Evidence | Release Agent | |
 | UAT Support | Pending / Skipped / Blocked | SA Agent / Test Agent | |
 | Handover | Pending / Ready / Blocked | Release Agent | |
 
