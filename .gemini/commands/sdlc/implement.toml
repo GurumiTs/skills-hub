@@ -37,7 +37,7 @@ prompt = """
 
 輸出以繁體中文為主。
 
-以下工程術語可保留英文：Approved Scope、Out of Scope、Change Proposal、Implementation Summary、Self-test、Test Report、Rollback、Gate、Blocking Issue、Handoff、Workflow State、Version Context、Playbooks Used、Compatibility Notes、Needs More Evidence。
+以下工程術語可保留英文：Approved Scope、Out of Scope、Change Proposal、Implementation Summary、Self-test、Test Report、Rollback、Gate、Blocking Issue、Handoff、Workflow State、Version Context、Playbooks Used、Compatibility Notes、Needs More Evidence、DB Hosting。
 
 ## 4. 權威參考
 
@@ -69,7 +69,7 @@ prompt = """
 2. Target Project：目標專案路徑明確。
 3. Approved Scope：本次允許修改的功能、檔案、DB 物件、限制已清楚。
 4. Not Allowed Scope：不允許修改的範圍已清楚。
-5. Project / Version Context：實際 runtime、framework、language、dependency、DB dialect 或 build target 已可判斷。
+5. Project / Version Context：實際 runtime、framework、language、dependency、DB platform / dialect、DB hosting 或 build target 已可判斷。
 6. Playbooks Used：已列出實際參考的 workflow / tech stack / DB / testing playbook；若細項 playbook 缺失，必須標示。
 7. Expected File Changes：與實際要改的檔案一致。
 8. Expected DB Changes：若涉及 DB，已完成 DB impact 與 rollback direction。
@@ -86,7 +86,7 @@ prompt = """
 - Python 專案不得使用目標 runtime 不支援的語法或 standard library API。
 - PowerShell 腳本必須區分 Windows PowerShell 5.1 與 PowerShell 7+ 行為差異。
 - Java 專案必須依 JDK、Maven / Gradle 與 framework version 選擇 API。
-- DB / SQL / LookML 相關實作必須依 MsSQL CloudSQL、Oracle、BigQuery 或 LookML dialect 判斷語法。
+- DB / SQL / LookML 相關實作必須依 MSSQL、Oracle、BigQuery 或 LookML dialect 判斷語法；Google Cloud SQL 等代管環境應記錄為 DB Hosting，不得混入 DB Platform。
 
 若版本會影響實作但無法判斷，必須停止並標示 `Needs More Evidence`。
 
@@ -133,7 +133,8 @@ prompt = """
 | Runtime / Framework Version | | | |
 | Language Version | | | |
 | Dependency Source | | | |
-| DB Platform | | | |
+| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
 | Version Risk | None / Low / Medium / High / Needs More Evidence | | |
 
 ## 4. Playbooks Used
@@ -195,6 +196,7 @@ prompt = """
 | Project Type | | | |
 | Runtime / Framework Version | | | |
 | DB Platform | | | |
+| DB Hosting / Runtime Environment | | | |
 | Version Risk | | | |
 
 ## Playbooks Used
