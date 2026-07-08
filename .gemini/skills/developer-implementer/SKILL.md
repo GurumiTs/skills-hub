@@ -62,7 +62,7 @@ description: Use when an approved implementation plan requires code changes, bug
 | Tool Capability | Purpose | Boundary |
 |---|---|---|
 | Read project files | 讀取與 approved scope、版本判斷直接相關的程式碼與設定 | 不無目的掃描整個 repository |
-| Read project manifests | 判斷 runtime、framework、language、dependency、build target | 不以最新版預設取代實際專案版本 |
+| Read project manifests | 判斷 runtime、framework、language、dependency、build target、DB platform、DB hosting | 不以最新版預設取代實際專案版本 |
 | Modify files | 套用 approved scope 內的變更 | 必須先符合 `GEMINI.md` Change Control 與使用者核准 |
 | Git diff / status | 確認實際變更與預期範圍一致 | 不自動 commit，不 push |
 | Test runner | 執行已核准且安全的測試指令 | 可能造成異動的測試需先確認 |
@@ -74,7 +74,7 @@ description: Use when an approved implementation plan requires code changes, bug
 - Target Project：目標專案路徑或 `/directory` context。
 - Approved Scope：本次允許實作的範圍。
 - Not Allowed Scope：本次不得處理的範圍。
-- Project / Version Context：runtime、framework、language、dependency、DB dialect、build target 或其缺口。
+- Project / Version Context：runtime、framework、language、dependency、DB platform / dialect、DB hosting、build target 或其缺口。
 - Playbooks Used：已參考的 workflow / tech stack / DB playbooks，以及缺失狀態。
 - Expected File Changes：預期新增、修改或刪除的檔案。
 - Acceptance Criteria：驗收條件或預期行為。
@@ -106,7 +106,7 @@ description: Use when an approved implementation plan requires code changes, bug
 - PowerShell：必須區分 Windows PowerShell 5.1 與 PowerShell 7+ 行為差異。
 - Java：必須依 JDK、Maven / Gradle 與 framework version 選擇 API。
 - Prompting：必須維持 system / developer / user prompt 邊界，不得混入本 ChatGPT 專案身分。
-- DB / BI：必須依 MsSQL CloudSQL、Oracle、BigQuery 或 LookML dialect 判斷 SQL / data access / validation 方式。
+- DB / BI：必須依 MSSQL、Oracle、BigQuery 或 LookML dialect 判斷 SQL / data access / validation 方式；Google Cloud SQL 等代管環境應記錄為 DB Hosting，不得混入 DB Platform。
 
 ## Workflow
 
@@ -154,7 +154,8 @@ description: Use when an approved implementation plan requires code changes, bug
 | Runtime / Framework Version | | | |
 | Language Version | | | |
 | Dependency Source | | | |
-| DB Platform | | | |
+| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
+| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
 | Version Risk | None / Low / Medium / High / Needs More Evidence | | |
 
 ## Playbooks Used
