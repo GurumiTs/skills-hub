@@ -57,10 +57,10 @@ Copy-Item .gemini/.env.example .gemini/.env
 | `REDMINE_API_KEY` | Redmine API Key |
 | `FILE_MCP_ROOTS` | file / git / test / static / secret scan 等工具允許操作的根目錄 |
 | `GIT_MCP_ROOTS` | git-mcp 允許操作的 repository root |
-| `MSSQL_CONN` | dev-doc-mcp 或 DB metadata 相關工具使用的 MSSQL 連線字串 |
-| `DB_METADATA_CONNECTIONS` | db-metadata-mcp 的連線設定集合 |
+| `SDLC_ARTIFACT_ROOT` | SDLC generated artifacts 的根目錄；相對路徑以 skills-hub repository root 解析 |
+| `SDLC_*_SUBDIR` | SA、DB、Workflow、Dev Docs、Requirements、Flowchart 的子目錄名稱 |
+| `DB_METADATA_CONNECTIONS` | db-metadata-mcp 唯一允許的 configured connection aliases |
 | `DB_METADATA_DEFAULT_CONNECTION` | db-metadata-mcp 的預設 connection key |
-| `DB_METADATA_MSSQL_CONN` | db-metadata-mcp 使用的 MSSQL connection string |
 | `TEST_RUNNER_ROOTS` | test-runner-mcp 允許執行測試的根目錄 |
 | `TEST_RUNNER_COMMANDS` | test-runner-mcp 允許執行的測試命令白名單 |
 | `STATIC_ANALYSIS_ROOTS` | static-analysis-mcp 允許分析的根目錄 |
@@ -165,7 +165,7 @@ gemini
 /directory show
 ```
 
-加入後即可請 Gemini 協助分析、規劃、開發、測試或整理文件。
+加入後即可請 Gemini 協助分析、規劃、開發、測試或整理文件。SDLC 產生的 SA spec、DB proposal 與 Workflow State 不會寫入目標專案，而會依 `SDLC_ARTIFACT_ROOT` 與相關 subdir 設定輸出。
 
 ---
 
@@ -203,6 +203,8 @@ gemini
 - 不要 commit `.gemini/.env`。
 - 不要 commit API Key、Password、Token、Cookie、Connection String 或公司內部敏感資訊。
 - `FILE_MCP_ROOTS`、`GIT_MCP_ROOTS`、`TEST_RUNNER_ROOTS`、`STATIC_ANALYSIS_ROOTS`、`SECRET_SCAN_ROOTS` 應限制在必要目錄。
+- DB metadata 只能使用 `DB_METADATA_CONNECTIONS` 中已配置的 aliases；不得使用目標專案 `web.config`、`appsettings.json` 或 raw connection string 建立連線。
+- 所有 Agent 與 SDLC Commands 都不得直接執行 DB mutation；migration / rollback / validation SQL 只能產生 proposal artifact，交由人員審查與手動執行。
 - 測試執行、DB 查詢、靜態分析與 secret scan 都可能涉及敏感資訊或系統負載，應保留人工確認。
-- 涉及正式環境、DB mutation、部署、權限、資安或批次作業時，應先評估風險與 rollback。
+- 涉及正式環境、部署、權限、資安或批次作業時，應先評估風險與 rollback。
 - Gemini 產生的檔案、程式碼或部署步驟都應經人工確認後再套用到重要環境。

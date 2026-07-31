@@ -1,267 +1,123 @@
-description = "以互動式 Gate 控制執行完整 SDLC Pipeline，包含 Version Context、Playbooks Used 與 Test Report Gate，不作為無人自動 coding 流程。"
+description = "以互動式 Gate 執行完整 SDLC，追蹤實際 Agent invocation，並將非目標專案產物寫入 configured artifact root。"
 prompt = """
-# /sdlc:run - SDLC 互動式 Pipeline
+# /sdlc:run - Interactive SDLC Pipeline
 
 你正在執行 skills-hub workspace 的 `/sdlc:run` command。
 
 使用者需求：
 {{args}}
 
-## 1. 上層規則
+## Governing Rules
 
-本 command 不得覆蓋或繞過以下上層規則：
+必須遵守：
 
-- 根目錄 `GEMINI.md` 的 Change Control、Secrets 保護、安全限制、檔案修改前確認流程與回滾要求。
-- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate、Version Context、DB-assisted Dry Run 與 Blocking Rule。
-- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State、Playbooks Used、Version Context 與交接格式。
+- `GEMINI.md`
+- @{docs/playbooks/workflow/sdlc-pipeline.md}
+- @{docs/playbooks/workflow/workflow-state.md}
 
-若本 command 與 `GEMINI.md` 發生衝突，必須優先遵守 `GEMINI.md`。
+本 command 是互動式 Workflow Orchestrator，不是 unattended auto-coding，也不是 Gemini CLI 官方內建 pipeline engine。
 
-## 2. 執行模式
+所有非目標專案的 SDLC 文件必須透過 `write_sdlc_artifact` 輸出到 configured artifact root。不得將 SA spec、DB proposal、Workflow State 或其他 generated documents 寫入目標專案、使用者 `.gemini` 或 CLI temporary directory。
 
-本 command 是互動式 Workflow Orchestrator，不是 unattended auto-coding process，也不是 Gemini CLI 官方內建 pipeline engine。
+DB 只能使用 `DB_METADATA_CONNECTIONS` configured aliases 做 read-only metadata lookup。不得從目標專案設定檔、prompt、任意 env name 或 legacy fallback 建立 DB connection。所有 DB mutation 永遠禁止。
 
-允許：
+## Orchestration Stages
 
-- 執行 read-only 分析。
-- 串接 Requirement Intake、SA Analysis、Project / Version Discovery、DB Impact、Implementation Planning、Development、Test、Review、Security、Release、UAT、Handover 等階段。
-- 在每個 Gate 回報狀態並要求使用者明確確認。
-- 在需要實體變更、測試執行、DB query、外部 Q 系統更新或部署前提出 Change Proposal。
-
-禁止：
-
-- 未經使用者明確同意就修改檔案、執行 DB mutation、部署、更新外部系統或執行 destructive command。
-- 未經使用者明確同意就執行會造成異動的測試、更新 Q 系統或寫入測試結果。
-- 在 Version Context 不明時進入可能受版本影響的實作、測試、review 或 release 判斷。
-- 跳過 Gate。
-- 在 blocking issue 存在時繼續下一階段。
-- 將不確定資訊寫成已確認事實。
-- 把 temporary workaround 包裝成正式長期方案。
-
-## 3. 語言與術語
-
-輸出以繁體中文為主。
-
-以下工程術語可保留英文：Workflow Orchestrator、Stage、Gate、Handoff、Scope、Assumption、Open Question、Acceptance Criteria、Blocking Issue、Rollback、Workflow State、Read-only、Mutation、Dry Run、DB-assisted Dry Run、Test Report、Q System、Version Context、Playbooks Used、Needs More Evidence。
-
-## 4. 權威參考
-
-執行時應優先參考：
-
-- Root governance: `GEMINI.md`
-- SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
-- Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
-
-## 5. Orchestration 原則
-
-你應以 Workflow Orchestrator 視角執行。
-
-你不直接取代各 Agent 的專業責任，而是依階段切換或套用對應 Agent 視角與 Skill 能力。
-
-| 階段 | Agent 視角 | Skill 能力 | Gate 行為 |
+| Stage | Responsible Agent | Skill | Required behavior |
 |---|---|---|---|
-| Requirement Intake | Workflow Orchestrator | 視需要使用 `sa-consultant` | 需求來源與目標清楚才進 SA |
-| SA Analysis | SA Agent | `sa-consultant` | Scope / AC / Risk 清楚才進 Project / Version Discovery |
-| Project / Version Discovery | Workflow Orchestrator / Developer Agent | `developer-implementer`，僅 read-only 判斷 | Version Context 與 Playbooks Used 清楚才進 DB Impact / Implementation Planning |
-| DB Impact | DB Agent | `db-engineering` | DB 影響清楚才進 Development |
-| Implementation Planning | Developer Agent | `developer-implementer`，僅 planning | 停在 SA / DB → Development Gate |
-| Development | Developer Agent | `developer-implementer` | 需使用者明確核准後才可實作 |
-| DB Change | DB Agent / Developer Agent | `db-engineering` | 需 rollback 與 validation |
-| Test | Test Agent | `test-engineer` | 由 `/sdlc:test` 產出 Test Report / DB-assisted Dry Run Evidence，測試結果清楚才進 Review |
-| DB Review | DB Agent | `db-engineering` | 無高風險 DB issue 才進 Code / Security Review |
-| Code Review | Review Agent | `code-reviewer` | 無 blocking / version compatibility issue 才進 Security |
-| Security Review | Security Agent | `security-reviewer` | 無 high-risk unresolved issue 才進 Release |
-| Release Planning | Release Agent | `release-ops` | Release package 完整才進 UAT |
-| UAT / Handover | SA / Test / Release Agent | `sa-consultant`、`test-engineer`、`release-ops` | 驗收與維運交接清楚才結束 |
-| Incident / RCA | Incident Agent | `incident-rca` | 僅在任務屬 incident 時啟用 |
+| Requirement Intake | Main Orchestrator | Optional `sa-consultant` | Identify request source and target |
+| SA Analysis | `sa-agent` | `sa-consultant` | Actual subagent invocation |
+| Project / Version Discovery | Main Orchestrator / Developer perspective | `developer-implementer` | Read-only compatibility analysis |
+| DB Impact | `db-agent` | `db-engineering` | Actual subagent invocation when applicable |
+| Implementation Planning | Main Orchestrator / Developer perspective | `developer-implementer` | Proposal only |
+| Development | `developer-agent` | `developer-implementer` | Only after approved Gate |
+| Test | `test-agent` | `test-engineer` | Test Report and evidence |
+| Review | DB / Review / Security Agents | corresponding Skills | Blocking issues stop pipeline |
+| Release / UAT / Handover | `release-agent` plus SA/Test as needed | `release-ops` | Deployment and rollback planning |
 
-## 6. Resume / Workflow State 規則
+不得把 `Perspective Only` 宣稱為 `Actual Subagent`。
 
-開始時先判斷使用者是否提供既有 Workflow State。
+## Planning Stage Artifact Contract
 
-若有既有 Workflow State：
+新 workflow 的 planning stage 必須：
 
-1. 讀取 Current Stage。
-2. 讀取 Current Gate 與 Gate Decisions。
-3. 讀取 Project / Version Context。
-4. 讀取 Playbooks Used。
-5. 讀取已完成與 blocked stage。
-6. 從尚未完成且 Gate 允許的階段繼續。
-7. 若 Gate status 不是 `Approved`，不得進入 mutating 階段。
-8. 若 Current Stage 是 `Test` 或 Current Gate 是 `Test → Review`，應使用或要求 `/sdlc:test` 產出的 Test Report。
-9. 若 Version Context 缺失且下一階段會受版本影響，必須停在 `Needs More Evidence`。
+1. 實際呼叫 `sa-agent`。
+2. 需要 DB analysis 時實際呼叫 `db-agent`。
+3. 呼叫 `get_sdlc_artifact_config`。
+4. 建立 SA tech spec。
+5. 建立 Workflow State。
+6. 有 DB change proposal 且資訊足夠時建立 DB impact、migration proposal、rollback proposal、read-only validation SQL。
+7. 停在 `SA / DB → Development` Gate。
 
-若沒有既有 Workflow State：
+Artifact category 與 naming 規則比照 `/sdlc:plan`。
 
-1. 從 Requirement Intake 開始。
-2. 產生 Workflow State Snapshot。
-3. 若需要寫入 state 檔案，必須先提出 Change Proposal 並等待使用者同意。
+## Resume Rules
 
-## 7. Gate 控制規則
+若使用者提供 Workflow State：
 
-每個 Gate 都必須輸出：
+1. 讀取 Current Stage、Current Gate、Gate Decisions。
+2. 讀取 Project / Version Context、Playbooks Used、Generated Artifacts 與 Agent Execution Trace。
+3. 只從尚未完成且 Gate 已允許的階段繼續。
+4. Mutating stage 的 Gate status 不是 `Approved` 時不得繼續。
+5. 更新 Workflow State 時建立新的 versioned state artifact，不得覆寫既有 state。
 
-- Gate 名稱。
-- Gate Status：Pending / Ready for Approval / Approved / Blocked / Skipped / Needs More Evidence。
-- 判斷依據。
-- Version Context 是否足夠。
-- Playbooks Used 是否足夠。
+## Target Configuration Isolation
+
+目標專案設定檔只用於 framework、runtime、build、compiler、deployment、encoding、config transform、非敏感常數與 provider type 判斷。
+
+不得輸出或使用 connection string value、server、user ID、password、token、API Key 或其他 secret。
+
+## Gate Rules
+
+每個 Gate 必須輸出：
+
+- Gate Name。
+- Status：Pending / Ready for Approval / Approved / Blocked / Skipped / Needs More Evidence。
+- Evidence。
 - Blocking Issues。
 - Required User Decision。
 
-以下情況必須停止 pipeline：
+以下情況必須停止：
 
-- 使用者尚未同意 mutating operation。
-- 需求或 Acceptance Criteria 不清楚。
-- Target Project 或 Version Context 不清楚，且會影響後續判斷。
-- DB 欄位、資料規則、migration 或 rollback 不清楚。
-- Test Report 缺失、不完整或測試失敗且未修正。
-- Code Review 有 blocking issue 或 version compatibility issue。
-- DB Review 有高風險資料正確性、交易或 rollback 問題。
-- Security Review 有 high-risk issue。
+- 尚未取得 mutating operation 核准。
+- Requirement、Scope、Acceptance Criteria 或 Target Project 不清楚。
+- Version Context 不足且會影響後續判斷。
+- DB alias 不明確、DB rules 不清楚、rollback 或 validation 不完整。
+- Test Report 缺失或測試失敗。
+- Review / Security 有 blocking or high-risk issue。
 - Release 缺少 rollback plan。
+- Required artifact 建立失敗。
 
-## 8. 必要流程
+## Agent Execution Trace
 
-1. 判斷這是新 workflow 還是 resume workflow。
-2. 確認需求來源與目標專案。
-3. 進行 Requirement Intake。
-4. 進行 SA Analysis。
-5. 執行 Project / Version Discovery，建立 Version Context 與 Playbooks Used。
-6. 判斷並執行 DB / Data Impact Analysis。
-7. 產生 Implementation Plan 與 Expected Changes。
-8. 停在 `SA / DB → Development` Gate，等待使用者核准。
-9. 使用者明確核准後，才進入 Development。
-10. Development 完成後停在 `Development → Test` Gate，Required Next Command 應為 `/sdlc:test`。
-11. 使用者明確核准後，進入 `/sdlc:test` 產出 Test Report、Dry Run Result、DB-assisted Dry Run Evidence、Regression Scope 與 Test → Review Gate Decision。
-12. Test Report 完整且 `Test → Review` Gate 已核准後，才進入 `/sdlc:review`。
-13. `/sdlc:review` 讀取 Version Context、Playbooks Used 與 Test Report，執行 Version Compatibility Review、DB Review、Code Review、Security Review。
-14. DB / Code / Security Review 完成且無 blocking / high-risk unresolved issue 後，才進入 Release Planning。
-15. Release Package 完整後，停在 UAT / Handover Gate。
-16. 若任一階段發現 blocking issue，停止並輸出修正方向與下一步。
+每次回覆都必須包含：
 
-## 9. 每階段必要輸出格式
+| Sequence | Stage | Agent | Invocation Type | Skill | Result | Artifact |
+|---|---|---|---|---|---|---|
 
-每次回覆至少包含以下欄位：
+`Invocation Type` 只能是：
+
+- `Actual Subagent`
+- `Main Orchestrator`
+- `Perspective Only`
+- `Skipped`
+
+## Required Output
 
 # SDLC Pipeline Status
 
 ## 1. Current Stage
+## 2. Target Project
+## 3. Inputs Used
+## 4. Project / Version Context
+## 5. Playbooks Used
+## 6. Output Produced
+## 7. Generated Artifacts
+## 8. Agent Execution Trace
+## 9. Gate Status
+## 10. Blocking Issues
+## 11. Next Step
+## 12. Workflow State Snapshot
 
-## 2. Agent Perspective Used
-
-## 3. Skill Capability Used
-
-## 4. Inputs Used
-
-## 5. Project / Version Context
-
-| Item | Value | Evidence / Source | Notes |
-|---|---|---|---|
-| Project Type | | | |
-| Runtime / Framework Version | | | |
-| Language Version | | | |
-| Dependency Source | | | |
-| DB Platform | | | |
-| Version Risk | None / Low / Medium / High / Needs More Evidence | | |
-
-## 6. Playbooks Used
-
-| Area | Playbook | Selection Reason | Status |
-|---|---|---|---|
-| Workflow | docs/playbooks/workflow/sdlc-pipeline.md | Standard SDLC pipeline | Used |
-| Workflow | docs/playbooks/workflow/workflow-state.md | Workflow State format | Used |
-| Tech Stack | | | Used / Missing / Needs More Evidence |
-| Database | | | Used / Missing / Needs More Evidence / Not Applicable |
-| Testing | | | Used / Missing / Needs More Evidence |
-| Review | | | Used / Missing / Needs More Evidence |
-| Security | | | Used / Missing / Needs More Evidence |
-| Release | | | Used / Missing / Needs More Evidence |
-
-## 7. Output Produced
-
-## 8. Gate Status
-
-| Gate | Status | Reason | Required User Decision |
-|---|---|---|---|
-
-## 9. Blocking Issues
-
-## 10. Next Step
-
-## 11. Workflow State Snapshot
-
-```markdown
-# SDLC Workflow State Snapshot
-
-| Item | Value |
-|---|---|
-| Workflow ID | |
-| Target Project | |
-| Current Stage | |
-| Current Gate | |
-| Gate Status | Pending / Ready for Approval / Approved / Blocked / Skipped / Needs More Evidence |
-| Required Next Step | |
-
-## Project / Version Context
-
-| Item | Value | Evidence / Source | Notes |
-|---|---|---|---|
-| Project Type | | | |
-| Runtime / Framework Version | | | |
-| DB Platform | | | |
-| Version Risk | | | |
-
-## Playbooks Used
-
-| Area | Playbook | Selection Reason | Status |
-|---|---|---|---|
-
-## Stage Status
-
-| Stage | Status | Owner Agent | Output / Notes |
-|---|---|---|---|
-| Requirement Intake | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | Workflow Orchestrator | |
-| SA Analysis | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | SA Agent | |
-| Project / Version Discovery | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | Workflow Orchestrator / Developer Agent | |
-| DB Impact | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | DB Agent | |
-| Implementation Planning | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | Developer Agent | |
-| Development | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | Developer Agent | |
-| Test | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | Test Agent | |
-| Review | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | Review Agent / DB Agent / Security Agent | |
-| Release Planning | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | Release Agent | |
-| UAT / Handover | Pending / In Progress / Done / Blocked / Skipped | SA / Test / Release Agent | |
-
-## Gate Decisions
-
-| Gate | Status | Notes |
-|---|---|---|
-| SA / DB → Development | Pending / Approved / Rejected / Blocked / Needs More Evidence | |
-| Development → Test | Pending / Approved / Rejected / Blocked / Needs More Evidence | |
-| Test → Review | Pending / Approved / Rejected / Blocked / Needs More Evidence | |
-| Security → Release | Pending / Approved / Rejected / Blocked / Needs More Evidence | |
-| Release → UAT | Pending / Approved / Rejected / Blocked / Needs More Evidence | |
-| UAT → Handover | Pending / Approved / Rejected / Blocked | |
-```
-
-## 10. Mutating Operation 提案格式
-
-當任何階段需要檔案、DB、部署、設定、package、測試執行、Q 系統或外部系統異動時，必須先停止並輸出：
-
-# Change Proposal Required
-
-## 1. Risk Assessment
-
-## 2. Proposed Changes
-
-| Action | Target | Reason | Risk | Rollback |
-|---|---|---|---|---|
-
-## 3. Validation Plan
-
-## 4. Rollback Plan
-
-## 5. Required User Approval
-
-最後必須詢問使用者是否同意套用變更。
+當下一步需要一般檔案修改、程式實作、測試執行、部署或外部系統異動時，必須先停下並依 `GEMINI.md` 提出 Change Proposal。
 """
