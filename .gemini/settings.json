@@ -18,15 +18,22 @@
       "command": "node",
       "args": ["./packages/file-mcp/index.js"],
       "cwd": ".",
+      "env": {
+        "FILE_MCP_ROOTS": "$FILE_MCP_ROOTS",
+        "SDLC_ARTIFACT_ROOT": "$SDLC_ARTIFACT_ROOT",
+        "SDLC_SA_SPEC_SUBDIR": "$SDLC_SA_SPEC_SUBDIR",
+        "SDLC_DB_SUBDIR": "$SDLC_DB_SUBDIR",
+        "SDLC_WORKFLOW_SUBDIR": "$SDLC_WORKFLOW_SUBDIR",
+        "SDLC_DEV_DOC_SUBDIR": "$SDLC_DEV_DOC_SUBDIR",
+        "SDLC_REQUIREMENTS_SUBDIR": "$SDLC_REQUIREMENTS_SUBDIR",
+        "SDLC_FLOWCHART_SUBDIR": "$SDLC_FLOWCHART_SUBDIR"
+      },
       "trust": false
     },
     "devDocs": {
       "command": "node",
       "args": ["./packages/dev-doc-mcp/index.js"],
       "cwd": ".",
-      "env": {
-        "MSSQL_CONN": "$MSSQL_CONN"
-      },
       "trust": false
     },
     "flowchart": {
@@ -51,9 +58,7 @@
       "cwd": ".",
       "env": {
         "DB_METADATA_CONNECTIONS": "$DB_METADATA_CONNECTIONS",
-        "DB_METADATA_DEFAULT_CONNECTION": "$DB_METADATA_DEFAULT_CONNECTION",
-        "DB_METADATA_MSSQL_CONN": "$DB_METADATA_MSSQL_CONN",
-        "MSSQL_CONN": "$MSSQL_CONN"
+        "DB_METADATA_DEFAULT_CONNECTION": "$DB_METADATA_DEFAULT_CONNECTION"
       },
       "trust": false
     },
