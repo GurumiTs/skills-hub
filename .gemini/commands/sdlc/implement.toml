@@ -1,228 +1,57 @@
-description = "依據已核准的 SDLC Plan 與 Version Context 執行受控實作，並停在 Development → Test Gate。"
+description = "依 approved Gate 與 compact Project Context 執行 encoding-safe 實作，並停在 Development → Test Gate。"
 prompt = """
-# /sdlc:implement - SDLC 實作階段
-
-你正在執行 skills-hub workspace 的 `/sdlc:implement` command。
+# /sdlc:implement - SDLC Implementation
 
 使用者需求：
 {{args}}
 
-## 1. 上層規則
+遵守 `GEMINI.md`。找不到使用者明確核准或 `SA / DB → Development = Approved` 時立即停止。
 
-本 command 不得覆蓋或繞過以下上層規則：
+## Required Flow
 
-- 根目錄 `GEMINI.md` 的 Change Control、Secrets 保護、安全限制、檔案修改前確認流程與回滾要求。
-- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate、Version Context 與 Blocking Rule。
-- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State、Playbooks Used 與 Version Context 格式。
+1. 讀取 approved scope、Acceptance Criteria、Expected Changes 與 Workflow State。
+2. 比對 Project Context evidence fingerprints：
+   - 未變更：重用 snapshot。
+   - 缺失或變更：呼叫 `inspect_project_context` 更新 compact context。
+3. 實際呼叫 `developer-agent`，傳入 approved scope、compact context、Expected Changes 與 DB Impact Result。
+4. 只讀取本次實作直接相關的 source files；原始 manifests 只在 compact context 無法支撐判斷時讀取。
+5. 既有文字檔先呼叫 `inspect_text_encoding`，使用 `write_file` 的 preserve mode。
+6. 新增檔案依同目錄同副檔名、Project Context 與 Developer Skill 明確選擇 encoding / line ending。
+7. 新增 dependency、更新 lock file、改 build/runtime target、擴大 scope 或增加 DB change 前停止並提出新的 Change Proposal。
+8. DB 只使用已核准 DB Impact / proposal；不得建立 DB connection 或執行 SQL mutation。
+9. 整理 post-write encoding verification、自測、風險與 rollback direction。
+10. 停在 `Development → Test` Gate。
 
-若本 command 與 `GEMINI.md` 發生衝突，必須優先遵守 `GEMINI.md`。
+## Blocking Conditions
 
-## 2. 執行模式
+- Approval、Target Project、Scope 或 Acceptance Criteria 不清
+- Project Context / dependency evidence 不足且影響實作
+- DB Impact 缺失
+- 無法保留 encoding、BOM 或 line ending
+- 需要未核准的 dependency / build / runtime / scope 變更
+- 發現 secret 或重大不可 rollback 風險
 
-本 command 只有在使用者已明確核准 SDLC Plan、Change Proposal，或提供的 Workflow State 已標示 `SA / DB → Development` Gate 為 `Approved` 時，才可進入實作。
-
-若找不到核准依據，必須停止，不得修改檔案。
-
-實作時仍必須遵守最小變更與版本相容原則：
-
-- 只處理 approved scope。
-- 不擴大需求。
-- 不自行決定未確認的業務規則。
-- 不引入與目標專案不相容的語法、套件、框架或架構。
-- 不使用未經確認的最新版 API、最新版框架慣例或新版 language feature。
-- 不輸出 secrets。
-- 不把 temporary workaround 包裝成正式長期方案。
-
-## 3. 語言與術語
-
-輸出以繁體中文為主。
-
-以下工程術語可保留英文：Approved Scope、Out of Scope、Change Proposal、Implementation Summary、Self-test、Test Report、Rollback、Gate、Blocking Issue、Handoff、Workflow State、Version Context、Playbooks Used、Compatibility Notes、Needs More Evidence、DB Hosting。
-
-## 4. 權威參考
-
-執行時應優先參考：
-
-- Root governance: `GEMINI.md`
-- SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
-- Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
-
-## 5. Agent / Skill 使用原則
-
-本 command 應以 Developer Agent 視角執行，並套用 `developer-implementer` Skill。
-
-必要時可借用以下視角，但不得取代主責：
-
-| 情境 | 使用視角 | 行為 |
-|---|---|---|
-| 發現需求不清或 scope 變更 | SA Agent | 停止實作，回到規劃或要求確認 |
-| Project / Version Context 不明 | Workflow Orchestrator / Developer Agent | 停止實作，要求補充版本或專案檔 |
-| 發現 DB / SQL / Schema / Data Flow 變更 | DB Agent | 停止或只在 approved scope 內處理，並要求 DB Gate 確認 |
-| 需要自測規劃 | Test Agent | 產出自測方式，不宣稱未執行測試已通過 |
-| 涉及 secrets、auth、config、dependency | Security Agent | 標示風險，不自行套用未核准的安全 workaround |
-
-## 6. 實作前必要檢查
-
-開始任何實體檔案變更前，必須先確認：
-
-1. Approval Evidence：使用者在目前對話中明確同意，或 Workflow State Gate 已標示 Approved。
-2. Target Project：目標專案路徑明確。
-3. Approved Scope：本次允許修改的功能、檔案、DB 物件、限制已清楚。
-4. Not Allowed Scope：不允許修改的範圍已清楚。
-5. Project / Version Context：實際 runtime、framework、language、dependency、DB platform / dialect、DB hosting 或 build target 已可判斷。
-6. Playbooks Used：已列出實際參考的 workflow / tech stack / DB / testing playbook；若細項 playbook 缺失，必須標示。
-7. Expected File Changes：與實際要改的檔案一致。
-8. Expected DB Changes：若涉及 DB，已完成 DB impact 與 rollback direction。
-9. Rollback Direction：至少能說明如何還原本次變更。
-
-若任一項不清楚，必須停止並回報缺口，不得猜測。
-
-## 7. 版本相容實作規則
-
-針對既有專案：
-
-- 必須依據 `.sln`、`.csproj`、`web.config`、`packages.config`、`pom.xml`、`build.gradle`、`requirements.txt`、`pyproject.toml`、`.psd1` 或其他專案檔判斷實際版本。
-- C# / ASP.NET Framework / WebForm 專案不得預設使用 ASP.NET Core、.NET 最新版或新版 C# 語法。
-- Python 專案不得使用目標 runtime 不支援的語法或 standard library API。
-- PowerShell 腳本必須區分 Windows PowerShell 5.1 與 PowerShell 7+ 行為差異。
-- Java 專案必須依 JDK、Maven / Gradle 與 framework version 選擇 API。
-- DB / SQL / LookML 相關實作必須依 MSSQL、Oracle、BigQuery 或 LookML dialect 判斷語法；Google Cloud SQL 等代管環境應記錄為 DB Hosting，不得混入 DB Platform。
-
-若版本會影響實作但無法判斷，必須停止並標示 `Needs More Evidence`。
-
-## 8. 必要流程
-
-1. 讀取 approved plan、workflow state、使用者明確核准內容或使用者提供的實作指示。
-2. 摘要 Approval Evidence。
-3. 確認 target project、approved scope、Project / Version Context 與 Playbooks Used。
-4. 列出本次將處理與不處理的範圍。
-5. 只讀取與本次 approved scope 直接相關的檔案。
-6. 依照目標專案既有語言、框架、版本、命名、錯誤處理、資料存取與目錄風格實作。
-7. 如果需要新增依賴、修改設定、更新 lock file、搬移架構、改 DB schema、改 runtime target 或擴大 scope，必須先停止並提出新的 Change Proposal。
-8. 若 DB 變更已核准，只能產出或修改 approved scope 內的 SQL / migration / rollback；不得執行 destructive SQL。
-9. 完成後整理 modified files、implementation summary、DB notes、version compatibility notes、self-test instructions、risks。
-10. 停在 `Development → Test` Gate，等待使用者是否進入 `/sdlc:test`。
-
-## 9. 停止條件
-
-遇到以下任一情況，必須停止實作：
-
-- 找不到使用者明確核准或 approved workflow state。
-- 需求、Acceptance Criteria、資料規則或權限規則不清。
-- Project / Version Context 不明，且會影響語法、API、framework、dependency 或 build 判斷。
-- 實作需要超出 approved scope。
-- DB 影響未分析但需求涉及 DB / SQL / Data Flow。
-- 目標專案路徑不明。
-- 需要修改 production data、執行部署、執行 destructive command。
-- 發現可能暴露 secrets 或敏感資訊。
-- 無法維持目標專案既有語法版本或框架相容性。
-
-## 10. 必要輸出格式
+## Required Output
 
 # SDLC Implementation Result
 
-## 1. Approval Evidence
+## Approval and Scope
+## Project Context Used
+## Modified Files
+| Action | Path | Summary | Encoding Before | Encoding After | BOM | Line Ending | Verification |
+|---|---|---|---|---|---|---|---|
 
-## 2. Target Project
+## Dependency / Build Notes
+## DB Notes
+## Implementation Summary
+## Self-test and Rollback
+## Risks / Follow-up
+## Agent Execution Trace
+| Sequence | Stage | Agent | Invocation Type | Result | Artifact |
+|---|---|---|---|---|---|
 
-## 3. Project / Version Context Used
+## Workflow State Update
+## Development → Test Gate
 
-| Item | Value | Evidence / Source | Notes |
-|---|---|---|---|
-| Project Type | | | |
-| Runtime / Framework Version | | | |
-| Language Version | | | |
-| Dependency Source | | | |
-| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
-| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
-| Version Risk | None / Low / Medium / High / Needs More Evidence | | |
-
-## 4. Playbooks Used
-
-| Area | Playbook | Selection Reason | Status |
-|---|---|---|---|
-| Workflow | docs/playbooks/workflow/sdlc-pipeline.md | Standard SDLC pipeline | Used |
-| Workflow | docs/playbooks/workflow/workflow-state.md | Workflow State format | Used |
-| Tech Stack | | | Used / Missing / Needs More Evidence |
-| Database | | | Used / Missing / Needs More Evidence / Not Applicable |
-
-## 5. Approved Scope Used
-
-## 6. Not Allowed Scope
-
-## 7. Modified Files
-
-| Action | Path | Summary | Reason |
-|---|---|---|---|
-
-## 8. DB Changes
-
-| Type | Object / File | Summary | Rollback |
-|---|---|---|---|
-
-若無 DB 變更，請明確寫：`本次未涉及 DB 變更。`
-
-## 9. Implementation Summary
-
-## 10. Compatibility Notes
-
-說明本次是否維持既有語言、框架、版本、dependency、命名、錯誤處理與架構風格。若使用任何可能受版本限制的語法或 API，必須列出依據。
-
-## 11. Self-test Instructions
-
-| Test | Steps | Expected Result | Notes |
-|---|---|---|---|
-
-若未實際執行測試，必須標示 `Not Executed`，不得宣稱 pass。
-
-## 12. Risks and Follow-up
-
-## 13. Workflow State Snapshot
-
-```markdown
-# SDLC Workflow State Snapshot
-
-| Item | Value |
-|---|---|
-| Current Stage | Development |
-| Gate | Development → Test |
-| Gate Status | Pending / Ready for Approval / Blocked / Needs More Evidence |
-| Required Next Command | /sdlc:test |
-
-## Project / Version Context
-
-| Item | Value | Evidence / Source | Notes |
-|---|---|---|---|
-| Project Type | | | |
-| Runtime / Framework Version | | | |
-| DB Platform | | | |
-| DB Hosting / Runtime Environment | | | |
-| Version Risk | | | |
-
-## Playbooks Used
-
-| Area | Playbook | Selection Reason | Status |
-|---|---|---|---|
-
-## Stage Status
-
-| Stage | Status | Owner Agent | Notes |
-|---|---|---|---|
-| Development | Done / Blocked / Needs More Evidence | Developer Agent | |
-| DB Change | Done / Skipped / Blocked / Needs More Evidence | DB Agent | |
-
-## Gate Decision Required
-
-- Gate: Development → Test
-- Status:
-- Required user decision:
-```
-
-## 14. Gate Decision Required
-
-最後必須明確詢問使用者是否同意進入 `/sdlc:test`。
-
-範例：
-
-> 目前已停在 `Development → Test` Gate。是否同意進入 `/sdlc:test` 產出 Test Report、Dry Run 結果與 Regression Scope？
+未實際執行測試時必須標示 `Not Executed`。最後詢問是否同意進入 `/sdlc:test`。
 """
