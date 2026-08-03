@@ -1,296 +1,47 @@
-description = "依據 Implementation Result、Version Context 與 Acceptance Criteria 執行 SDLC Test 階段，產出 Test Report、Dry Run 結果、Regression Scope，並停在 Test → Review Gate。"
+description = "依 Implementation Result 與 compact Workflow State 執行測試、encoding verification 與 Test → Review Gate。"
 prompt = """
-# /sdlc:test - SDLC Test 階段
-
-你正在執行 skills-hub workspace 的 `/sdlc:test` command。
+# /sdlc:test - SDLC Test
 
 使用者需求：
 {{args}}
 
-## 1. 上層規則
+遵守 `GEMINI.md`。找不到 `Development → Test = Approved` 或等效核准時停止。預設只做 Planning / Dry Run / Evidence Review；會造成 mutation 的 execution 需另行核准。
 
-本 command 不得覆蓋或繞過以下上層規則：
+## Required Flow
 
-- 根目錄 `GEMINI.md` 的 Change Control、Secrets 保護、安全限制、檔案修改前確認流程與回滾要求。
-- `docs/playbooks/workflow/sdlc-pipeline.md` 定義的 SDLC Pipeline、Gate、Version Context、DB-assisted Dry Run 與 Blocking Rule。
-- `docs/playbooks/workflow/workflow-state.md` 定義的 Workflow State、Playbooks Used、Version Context 與 Test Report 格式。
+1. 讀取 Implementation Result、Acceptance Criteria、modified files 與 compact Workflow State。
+2. Project Context fingerprint 未變時直接重用；變更時才呼叫 `inspect_project_context`。
+3. 實際呼叫 `test-agent`，建立 Test Scope、Cases、Edge Cases、Test Data、Regression Scope 與 execution status。
+4. 對每個新增或修改的文字檔呼叫 `inspect_text_encoding`，比對 Implementation Result 與 Workflow State encoding policy。
+5. DB evidence 只有在需求涉及 DB 且必要時才呼叫 `db-agent`，並只使用 configured alias / read-only query。
+6. 未實際執行的測試標示 `Not Tested`；不得把 Dry Run 寫成 Pass。
+7. Encoding / BOM / line ending 不符、Acceptance Criteria 無證據或有 blocking failure 時，`Test → Review` 必須 Blocked。
 
-若本 command 與 `GEMINI.md` 發生衝突，必須優先遵守 `GEMINI.md`。
+## Test Modes
 
-## 2. 執行模式
+`Planning`、`Dry Run`、`DB-assisted Dry Run`、`Evidence Review`、`Execution`。只有有效 execution evidence 才可標示 Pass。
 
-本 command 是 SDLC Test Stage 的正式入口，預設以 read-only test planning / dry run / evidence review 為主。
-
-允許：
-
-- 讀取 SDLC Plan、Implementation Result、modified files、Project / Version Context、DB Change Summary、Acceptance Criteria、Test Environment 與既有測試慣例。
-- 產生 Test Scope、Out of Test Scope、Test Cases、Edge Cases、Test Data Requirements、Regression Scope、Dry Run Result、DB-assisted Dry Run Evidence 與 Test Report。
-- 在不造成檔案、資料、外部系統異動的前提下，分析可執行測試指令與測試前置條件。
-- 在使用者明確同意後，才可呼叫 test runner、CI、企業內部 Q 系統或 QA platform 等外部測試能力。
-
-禁止：
-
-- 未經使用者明確同意前執行會造成檔案異動、DB 異動、外部系統更新、測試狀態更新或正式資料異動的測試。
-- 未經使用者明確同意前寫入 Test Report 檔案、測試案例檔或外部 Q 系統。
-- 未經 DB Agent 判斷與使用者同意前執行 DB query。
-- 將 dry run 結果寫成已實際測試通過。
-- 將未執行測試標示為 Pass。
-- 在有 blocking failure、必要測試資料缺失、測試環境不明、Version Context 不明或 Acceptance Criteria 不清時進入 Review。
-- 在回覆中完整輸出 secrets、connection string、token、password、cookie 或私人憑證。
-
-## 3. 語言與術語
-
-輸出以繁體中文為主。
-
-以下工程術語可保留英文：Test Scope、Out of Test Scope、Test Case、Edge Case、Test Data、Regression Scope、Dry Run、DB-assisted Dry Run、Execution Result、Pass、Fail、Blocked、Not Tested、Not Applicable、Gate、Handoff、Workflow State、Read-only、Mutation、Q System、Test Runner、Version Context、Playbooks Used、Needs More Evidence、DB Hosting。
-
-## 4. 權威參考
-
-執行時應優先參考：
-
-- Root governance: `GEMINI.md`
-- SDLC pipeline and gates: @{docs/playbooks/workflow/sdlc-pipeline.md}
-- Workflow state format: @{docs/playbooks/workflow/workflow-state.md}
-
-## 5. Agent / Skill 使用原則
-
-本 command 應以 Test Agent 視角執行，並套用 `test-engineer` Skill。
-
-必要時可借用以下視角，但不得取代主責：
-
-| 情境 | 使用視角 | 行為 |
-|---|---|---|
-| Acceptance Criteria、使用流程或業務規則不清 | SA Agent | 停止並要求補充或回到 `/sdlc:plan` |
-| Version Context 不明或測試方式受版本影響 | Developer Agent / Workflow Orchestrator | 停止並要求補充專案版本資訊 |
-| 測試資料、SQL、migration、資料狀態或 DB validation 不清 | DB Agent | 只做 read-only 判斷；需要 DB evidence 時負責 DB-assisted Dry Run |
-| 測試失敗且屬程式邏輯 | Developer Agent | Handoff 修正方向，不直接修 code |
-| 測試涉及敏感資料、權限、外部系統或 secrets | Security Agent | 標示風險與必要前置條件 |
-| Test → Review Gate 判斷 | Workflow Orchestrator | 彙整 Gate 狀態與使用者決策 |
-
-## 6. Test Execution Modes
-
-本 command 支援以下模式，必須在輸出中明確標示目前採用哪一種：
-
-| Mode | 說明 | 是否可標示 Pass |
-|---|---|---|
-| Planning | 只產生測試案例、資料需求、Regression Scope | 不可 |
-| Dry Run | 檢查測試前置條件、預期執行項目、測試資料、環境與版本風險，但不真正執行測試 | 不可 |
-| DB-assisted Dry Run | 由 DB Agent 以 read-only 方式提供 metadata / bounded evidence，Test Agent 整理為 dry run evidence | 不可 |
-| Evidence Review | 讀取使用者提供的測試結果或外部系統結果並整理 | 只有證據明確時才可 |
-| Execution | 在使用者明確同意後，執行安全且已核准的測試或呼叫外部測試系統 | 可依實際結果標示 |
-
-若未實際執行測試或缺少有效測試證據，狀態必須是 `Not Tested`、`Blocked` 或 `Needs More Evidence`，不得標示為 `Pass`。
-
-## 7. Version Context 測試規則
-
-所有測試設計、dry run 與測試指令都必須符合目標專案實際版本：
-
-- C# / ASP.NET Framework / WebForm：不得預設 ASP.NET Core、.NET 最新版或新版 C# 測試框架慣例。
-- Python：不得預設使用 runtime 不支援的 pytest / unittest / library API。
-- PowerShell：必須區分 Windows PowerShell 5.1 與 PowerShell 7+。
-- Java：必須依 JDK、Maven / Gradle 與 framework version 設計測試。
-- DB：必須依 MSSQL、Oracle、BigQuery 或 LookML dialect 判斷 dry run / validation 方法；Google Cloud SQL 等代管環境應記錄為 DB Hosting，不得混入 DB Platform。
-
-若 Version Context 會影響測試但不可判斷，Gate 必須標示 `Needs More Evidence` 或 `Blocked`。
-
-## 8. DB-assisted Dry Run Rules
-
-若使用者 prompt、Implementation Result、SQL、LookML 或測試資料需求提到特定 table、schema、dataset、query、stored procedure、LookML explore / view，且 dry run 需要 DB evidence，必須：
-
-1. 先由 DB Agent 判斷 connection、environment、DB platform、read-only 可行性與資料敏感性。
-2. 優先執行 metadata / schema / column / constraint / index 查詢。
-3. 必要時只允許 bounded row count、existence check、limited aggregate 或 bounded sample query。
-4. sample query 必須避免 `SELECT *`、避免敏感欄位、明確限制筆數。
-5. BigQuery 可使用 dry run / explain / estimated scan check。
-6. LookML / Looker 只整理 read-only validation evidence 或使用者提供的既有結果。
-
-禁止：INSERT、UPDATE、DELETE、MERGE、TRUNCATE、DROP、ALTER、大量掃描、full dump、敏感欄位完整輸出、未確認為 read-only 的 stored procedure / function。
-
-若 connection、environment、table ownership、資料敏感性或 DB dialect 不明，必須停在 `Needs More Evidence`。
-
-## 9. Playbooks Used 規則
-
-本 command 必須列出實際參考的 playbooks。細項 playbook 尚未建立時，標示 `Missing` 或 `Needs More Evidence`，不得假裝已參考。
-
-## 10. 必要輸入
-
-開始 Test Stage 前，必須確認：
-
-1. Approval Evidence：`Development → Test` Gate 已由使用者核准，或 Workflow State 已標示 Approved。
-2. Target Project：目標專案路徑明確。
-3. Approved Scope：本次測試對應的需求與實作範圍明確。
-4. Project / Version Context：測試設計可依目標專案實際版本判斷。
-5. Playbooks Used：已列出實際參考或缺失。
-6. Implementation Result：包含 modified files、implementation summary、DB changes、self-test instructions。
-7. Acceptance Criteria：足以設計測試案例。
-8. DB Change Summary：若涉及 DB / SQL / Data Flow，需包含 migration、rollback、validation direction。
-9. Test Environment：測試環境、資料來源、限制或未確認事項。
-10. Known Risks：已知風險與需要回歸的範圍。
-
-若缺少必要輸入，必須停止或標示 `Needs More Evidence`，不得進入 Review。
-
-## 11. 必要流程
-
-1. 讀取 SDLC Plan、Implementation Result、Workflow State 與使用者提供的測試指示。
-2. 摘要 Approval Evidence、Test Mode、Project / Version Context 與 Playbooks Used。
-3. 確認 Test Scope 與 Out of Test Scope。
-4. 將 Acceptance Criteria 對應到 Test Cases。
-5. 補充 Edge Cases，包含空值、邊界值、錯誤輸入、權限差異、重複操作、資料狀態差異與 integration 情境。
-6. 規劃 Test Data Requirements，包含資料狀態、DB 前置條件、權限角色、外部系統依賴。
-7. 規劃 Regression Scope，涵蓋受影響流程、API、DB query、UI、batch、job、report、integration。
-8. 若使用者要求 dry run，產出 Dry Run Result，不執行測試。
-9. 若 dry run 需要 DB evidence，交由 DB Agent 做 read-only DB-assisted Dry Run 判斷與 evidence 整理。
-10. 若使用者要求 execution，先確認測試工具、環境、權限與異動風險；若會造成 mutation，先提出 Change Proposal。
-11. 整理 Execution Result，並區分 Pass / Fail / Blocked / Not Tested / Not Applicable。
-12. 若測試失敗，提供 reproduction steps、expected result、actual result、handoff target。
-13. 若測試無法執行，標示原因與需要補充的 evidence。
-14. 停在 `Test → Review` Gate，要求使用者確認是否進入 `/sdlc:review`。
-
-## 12. 停止條件
-
-- 找不到 `Development → Test` Gate 的核准依據。
-- Acceptance Criteria 不清。
-- Implementation Result 不完整。
-- Project / Version Context 不明且影響測試方式。
-- Test Environment 不明，且無法進行有效 dry run。
-- DB 測試資料、migration、rollback 或 validation direction 不清。
-- DB-assisted dry run 需要 connection / table evidence 但資訊不足。
-- 測試工具可能造成異動但尚未取得同意。
-- 有 blocking failure 尚未修正。
-- 外部 Q 系統、test runner 或 QA platform 的結果不完整。
-- 任務可能暴露 secrets 或敏感資訊。
-
-## 13. 必要輸出格式
+## Required Output
 
 # SDLC Test Report
 
-## 1. Approval Evidence
+## Mode and Inputs
+## Project Context Used
+## Test Scope / Cases / Regression
+## Encoding Verification
+| File | Expected | Actual | BOM | Line Ending | Status |
+|---|---|---|---|---|---|
 
-## 2. Test Mode
+## DB-assisted Evidence
+## Execution Result
+## Failed / Blocked / Not Tested Items
+## Risks and Handoff
+## Agent Execution Trace
+| Sequence | Stage | Agent | Invocation Type | Result | Artifact |
+|---|---|---|---|---|---|
 
-Planning / Dry Run / DB-assisted Dry Run / Evidence Review / Execution
+## Workflow State Update
+## Test → Review Gate
 
-## 3. Project / Version Context Used
-
-| Item | Value | Evidence / Source | Notes |
-|---|---|---|---|
-| Project Type | | | |
-| Runtime / Framework Version | | | |
-| Language Version | | | |
-| Dependency Source | | | |
-| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
-| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
-| Version Risk | None / Low / Medium / High / Needs More Evidence | | |
-
-## 4. Playbooks Used
-
-| Area | Playbook | Selection Reason | Status |
-|---|---|---|---|
-| Workflow | docs/playbooks/workflow/sdlc-pipeline.md | Standard SDLC pipeline | Used |
-| Workflow | docs/playbooks/workflow/workflow-state.md | Workflow State format | Used |
-| Tech Stack | | | Used / Missing / Needs More Evidence |
-| Database | | | Used / Missing / Needs More Evidence / Not Applicable |
-| Testing | | | Used / Missing / Needs More Evidence |
-
-## 5. Test Inputs
-
-| Input | Status | Notes |
-|---|---|---|
-| Approved Scope | Provided / Missing | |
-| Implementation Result | Provided / Missing | |
-| Acceptance Criteria | Provided / Missing | |
-| DB Change Summary | Provided / Missing / Not Applicable | |
-| Test Environment | Confirmed / Missing / Limited | |
-| Known Risks | Provided / Missing | |
-
-## 6. Test Scope
-
-## 7. Out of Test Scope
-
-## 8. Test Cases
-
-| ID | Acceptance Criteria | Scenario | Steps | Expected Result | Status | Notes |
-|---|---|---|---|---|---|---|
-
-## 9. Edge Cases
-
-## 10. Test Data Requirements
-
-| Data / Role / State | Purpose | Source | Required Before Execution | Notes |
-|---|---|---|---|---|
-
-## 11. Regression Scope
-
-## 12. Dry Run Result
-
-| Item | Result | Risk | Required Action |
-|---|---|---|---|
-
-## 13. DB-assisted Dry Run Evidence
-
-| DB Platform | Object / Table / Dataset | Query Type | Read-only Evidence | Risk / Notes |
-|---|---|---|---|---|
-
-## 14. Execution Result
-
-| Test ID | Status | Evidence | Notes |
-|---|---|---|---|
-
-## 15. Failed / Blocked / Not Tested Items
-
-| ID | Status | Issue | Expected | Actual / Missing Evidence | Handoff Target | Notes |
-|---|---|---|---|---|---|---|
-
-## 16. Risks and Follow-up
-
-## 17. Workflow State Snapshot
-
-```markdown
-# SDLC Workflow State Snapshot
-
-| Item | Value |
-|---|---|
-| Current Stage | Test |
-| Gate | Test → Review |
-| Gate Status | Pending / Ready for Approval / Blocked / Needs More Evidence |
-| Required Next Command | /sdlc:review |
-
-## Project / Version Context
-
-| Item | Value | Evidence / Source | Notes |
-|---|---|---|---|
-| Project Type | | | |
-| Runtime / Framework Version | | | |
-| DB Platform | | | |
-| DB Hosting / Runtime Environment | | | |
-| Version Risk | | | |
-
-## Playbooks Used
-
-| Area | Playbook | Selection Reason | Status |
-|---|---|---|---|
-
-## Stage Status
-
-| Stage | Status | Owner Agent | Notes |
-|---|---|---|---|
-| Test Planning | Done / Blocked / Needs More Evidence | Test Agent | |
-| Dry Run | Done / Skipped / Blocked / Needs More Evidence | Test Agent | |
-| DB-assisted Dry Run | Done / Skipped / Blocked / Needs More Evidence | DB Agent / Test Agent | |
-| Test Execution | Done / Skipped / Blocked / Not Tested / Needs More Evidence | Test Agent | |
-
-## Gate Decision Required
-
-- Gate: Test → Review
-- Status:
-- Required user decision:
-```
-
-## 18. Gate Decision Required
-
-最後必須明確詢問使用者是否同意進入 `/sdlc:review`。
-
-範例：
-
-> 目前已停在 `Test → Review` Gate。是否同意依照以上 Test Report 進入 `/sdlc:review`，進行 DB Review、Code Review 與 Security Review？
+最後詢問是否同意進入 `/sdlc:review`。
 """
