@@ -1,219 +1,145 @@
 # Workflow State Playbook
 
-Workflow State 用於記錄 `/sdlc:plan`、`/sdlc:run`、`/sdlc:implement`、`/sdlc:test`、`/sdlc:review`、`/sdlc:release` 執行過程中的階段狀態、gate 決策與交付物。
+Workflow State 是 skills-hub 的跨 Command 交接格式，不是 Gemini CLI 官方 state engine。它只保存後續階段真正需要的 compact context，避免重複讀取完整 manifests、playbooks 與前序長篇回覆。
 
-此文件定義建議格式。若要實際寫入 workflow state 檔案，仍必須遵守 `GEMINI.md` Change Control，先取得使用者明確同意。
+使用 `write_sdlc_artifact` 儲存於 configured workflow directory；更新時建立版本化檔案，不覆寫既有 state。
 
-Workflow State 是本 repo 的狀態交接格式，不是 Gemini CLI 官方內建 workflow state engine。Gemini CLI 的 project custom commands、`@{...}` file injection 與 `GEMINI.md` context 可協助載入此格式，但狀態更新、gate 判斷與交接規則由本 repo 的 Commands / Agents / Skills 定義。
+## Reuse Rule
 
-## 建議儲存位置
+`/sdlc:plan` 透過 `inspect_project_context` 建立 snapshot 與 `context_fingerprint`。後續階段：
 
-```text
-docs/_generated/workflows/<workflow-id>/state.md
-```
+1. 先比對 evidence fingerprints。
+2. 未變更時重用 snapshot。
+3. 缺失、衝突或變更時才重新 inspect。
+4. 原始 manifest 只在 compact result 無法支撐判斷時讀取最小範圍。
+5. Connection value 與 secrets 永遠不進入 state。
 
-若任務目標是外部專案，應優先依該目標專案的文件規則存放，或由使用者指定。
-
-## Workflow ID 建議
-
-```text
-YYYYMMDD-<source>-<short-title>
-```
-
-範例：
-
-```text
-20260701-redmine-1234-email-2fa
-```
-
-## Version Context Rule
-
-針對既有專案時，Workflow State 必須記錄可影響實作、測試、review 或 release 的版本資訊。
-
-不得以最新版框架、最新版 library、最新版語法或通用最佳實務取代目標專案實際版本。
-
-若無法判斷版本，必須標示：
-
-```text
-Version Context: Unknown
-Gate Status: Needs More Evidence / Blocked
-```
-
-常見版本來源包含：
-
-- `.sln`、`.csproj`、`web.config`、`packages.config`、`global.json`。
-- `requirements.txt`、`pyproject.toml`、`Pipfile`。
-- `pom.xml`、`build.gradle`。
-- `.psd1`、`.psm1`、PowerShell module manifest。
-- DB connection hint、SQL dialect、schema metadata、LookML model / explore / view。
-- DB hosting / runtime environment，例如 Google Cloud SQL、Azure SQL、AWS RDS、VM、on-prem。
-- CI / deployment / runtime 設定。
-
-DB Platform 與 DB Hosting 必須分開記錄。`MSSQL`、`Oracle`、`BigQuery` 是 DB platform / dialect；`Google Cloud SQL` 是 hosting / managed service context，不應寫成 `MSSQL CloudSQL`。
-
-## Playbook Reference Rule
-
-`Playbooks Used` 是本 repo 的交接欄位，用來記錄 Agent / Skill 在該階段實際參考的文件與判斷理由。
-
-這不是 Gemini CLI 官方自動 Playbook Routing 功能。若 command 或 agent 需要使用 playbook，必須透過 prompt 指示、`@{...}` file injection、`GEMINI.md` context 或明確讀檔行為取得內容。
-
-若無法判斷應參考哪份 playbook，必須標示 `Needs More Evidence`，不得隨機套用不相干 playbook。
-
-## State Template
+## Compact State Template
 
 ```markdown
 # SDLC Workflow State
 
-## Workflow Info
+## Workflow
 
-| 項目 | 內容 |
+| Item | Value |
 |---|---|
 | Workflow ID | |
-| Source | Redmine / Manual / GitHub Issue / Incident |
-| Source ID | |
+| Source / ID | |
 | Target Project | |
 | Current Stage | |
 | Current Gate | |
 | Gate Status | Pending / Ready for Approval / Approved / Rejected / Blocked / Skipped / Needs More Evidence |
-| Created At | |
+| Required Next Step | |
 | Updated At | |
-| Owner | |
 
-## Requirement Summary
+## Requirement Contract
 
-## Acceptance Criteria
+### Summary
+### Acceptance Criteria
+### In Scope
+### Out of Scope
+### Assumptions / Open Questions
 
-## In Scope
+## Project Context Snapshot
 
-## Out of Scope
+| Item | Value | Evidence |
+|---|---|---|
+| Project Type | | |
+| Language / Version | | |
+| Runtime / Framework | | |
+| Package Manager | | |
+| Direct Dependency Source | | |
+| Resolved Dependency Source | | |
+| Build Target / Compiler | | |
+| Hosting / Deployment | | |
+| DB Platform / Hosting | | |
+| Connection Names / Providers | values redacted | |
+| Context Fingerprint | | |
+| Context Risk | None / Low / Medium / High / Needs More Evidence | |
 
-## Assumptions
+### Evidence Fingerprints
 
-## Open Questions
+| File | SHA-256 | Size |
+|---|---|---|
 
-## Project and Version Context
+## File Encoding Policy
 
-| Item | Value | Evidence / Source | Notes |
-|---|---|---|---|
-| Project Type | C# / ASP.NET Framework / WebForm / Python / PowerShell / Java / Prompting / LookML / Unknown | | |
-| Runtime / Framework Version | | | |
-| Language Version | | | |
-| Dependency Source | NuGet / pip / Maven / Gradle / PowerShell module / Other | | |
-| Build / Deployment Target | | | |
-| DB Platform | MSSQL / Oracle / BigQuery / Not Applicable / Unknown | | |
-| DB Hosting / Runtime Environment | Google Cloud SQL / Azure SQL / AWS RDS / VM / On-prem / Not Applicable / Unknown | | |
-| BI / Semantic Layer | LookML / Looker / Not Applicable / Unknown | | |
-| Version Risk | None / Low / Medium / High / Needs More Evidence | | |
+| Item | Value | Evidence |
+|---|---|---|
+| Existing File Rule | Preserve encoding / BOM / line ending | inspect_text_encoding |
+| Observed Encoding | | |
+| New File Default | utf8 / utf8-bom / project-specific / Needs More Evidence | |
+| Line Ending | CRLF / LF / Mixed / Unknown | |
 
 ## Playbooks Used
 
-| Area | Playbook | Selection Reason | Status |
+只記錄實際讀取的 playbook；未讀取不得標示 Used。
+
+| Area | Playbook | Reason | Status |
 |---|---|---|---|
-| Workflow | docs/playbooks/workflow/sdlc-pipeline.md | Standard SDLC pipeline | Used |
-| Workflow | docs/playbooks/workflow/workflow-state.md | Workflow state handoff format | Used |
-| Tech Stack | | | Used / Missing / Needs More Evidence |
-| Database | | | Used / Missing / Needs More Evidence / Not Applicable |
-| Testing | | | Used / Missing / Needs More Evidence |
-| Review | | | Used / Missing / Needs More Evidence |
-| Security | | | Used / Missing / Needs More Evidence |
-| Release | | | Used / Missing / Needs More Evidence |
 
-## Stage Status
+## Stage and Gate Status
 
-| Stage | Status | Owner Agent | Output / Link | Notes |
-|---|---|---|---|---|
-| Requirement Intake | Pending / In Progress / Done / Blocked / Needs More Evidence | Workflow Orchestrator | | |
-| SA Analysis | Pending / In Progress / Done / Blocked / Needs More Evidence | SA Agent | | |
-| Project / Version Discovery | Pending / In Progress / Done / Blocked / Needs More Evidence | Workflow Orchestrator / Developer Agent | | |
-| DB Impact | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | DB Agent | | |
-| Implementation Planning | Pending / In Progress / Done / Blocked / Needs More Evidence | Developer Agent | | |
-| Development | Pending / In Progress / Done / Blocked / Needs More Evidence | Developer Agent | | |
-| DB Change | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | DB Agent | | |
-| Test | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | Test Agent | | Test Report / Dry Run / Evidence Review |
-| DB Review | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | DB Agent | | |
-| Code Review | Pending / In Progress / Done / Blocked / Needs More Evidence | Review Agent | | |
-| Security Review | Pending / In Progress / Done / Blocked / Needs More Evidence | Security Agent | | |
-| Release Planning | Pending / In Progress / Done / Blocked / Needs More Evidence | Release Agent | | |
-| UAT Support | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | SA Agent / Test Agent | | |
-| Handover | Pending / In Progress / Done / Blocked / Needs More Evidence | Release Agent | | |
-| Incident / RCA | Pending / In Progress / Done / Blocked / Skipped / Needs More Evidence | Incident Agent | | |
+| Stage | Status | Owner Agent | Output / Notes |
+|---|---|---|---|
+| Planning | Pending / Done / Blocked / Needs More Evidence | SA / DB / Orchestrator | |
+| Development | Pending / Done / Blocked / Needs More Evidence | Developer Agent | |
+| Test | Pending / Done / Blocked / Not Tested / Needs More Evidence | Test Agent | |
+| Review | Pending / Done / Blocked / Needs More Evidence | Review / DB / Security | |
+| Release / UAT / Handover | Pending / Done / Blocked / Needs More Evidence | Release Agent | |
 
-## Gate Decisions
+| Gate | Status | Evidence / Decision |
+|---|---|---|
+| SA / DB → Development | | |
+| Development → Test | | |
+| Test → Review | | |
+| Security → Release | | |
+| Release → UAT | | |
+| UAT → Handover | | |
 
-| Gate | Status | Decision By | Decision Time | Notes |
-|---|---|---|---|---|
-| Requirement Intake → SA | Pending / Approved / Rejected / Blocked / Needs More Evidence | | | |
-| SA → Project / Version Discovery | Pending / Approved / Rejected / Blocked / Needs More Evidence | | | |
-| Project / Version Discovery → DB Impact / Implementation Planning | Pending / Approved / Rejected / Blocked / Needs More Evidence | | | |
-| SA / DB → Development | Pending / Approved / Rejected / Blocked / Needs More Evidence | | | |
-| Development → Test | Pending / Approved / Rejected / Blocked / Needs More Evidence | | | |
-| Test → Review | Pending / Approved / Rejected / Blocked / Needs More Evidence | | | |
-| Security → Release | Pending / Approved / Rejected / Blocked / Needs More Evidence | | | |
-| Release → UAT | Pending / Approved / Rejected / Blocked / Needs More Evidence | | | |
-| UAT → Handover | Pending / Approved / Rejected / Blocked / Needs More Evidence | | | |
+## Expected Changes
 
-## Expected File Changes
-
-| Action | Path | Reason | Status |
+| Type | Target | Reason | Approval / Status |
 |---|---|---|---|
 
 ## Actual File Changes
 
-| Action | Path | Summary |
-|---|---|---|
+| Action | Path | Summary | Encoding Before | Encoding After | BOM | Line Ending | Verification |
+|---|---|---|---|---|---|---|---|
 
-## DB Changes
+## DB Change Proposals
 
-| Type | Object | Summary | Rollback |
-|---|---|---|---|
-
-## DB-assisted Dry Run Evidence
-
-| DB Platform | Object / Table / Dataset | Query Type | Read-only Evidence | Risk / Notes |
+| Object / File | Summary | Rollback | Validation | Status |
 |---|---|---|---|---|
 
-## Test Report
+## Test Summary
 
-| Item | Value |
-|---|---|
-| Test Mode | Planning / Dry Run / Evidence Review / Execution |
-| Test Status | Pass / Fail / Blocked / Not Tested / Not Applicable / Needs More Evidence |
-| Dry Run Result | |
-| Regression Scope | |
-| Failed / Blocked / Not Tested Items | |
+| Mode | Status | Regression Scope | Failed / Blocked / Not Tested |
+|---|---|---|---|
 
-## Review Results
+## Review Summary
 
-## Security Results
+| Area | Decision | Blocking / High Findings |
+|---|---|---|
 
-## Release Notes
+## Generated Artifacts
 
-## Rollback Plan
+| Category | Path | Status |
+|---|---|---|
 
-## Follow-up Items
+## Agent Execution Trace
+
+| Sequence | Stage | Agent | Invocation Type | Result | Artifact |
+|---|---|---|---|---|---|
+
+## Risks / Follow-up / Rollback
 ```
 
-## Status Values
+## Gate Rules
 
-| Status | Meaning |
-|---|---|
-| Pending | 尚未開始 |
-| In Progress | 正在處理 |
-| Done | 已完成 |
-| Blocked | 因問題停止 |
-| Skipped | 經確認後略過 |
-| Needs More Evidence | 需要更多需求、版本、DB、測試、環境或外部系統證據，不能視為通過 |
-
-## Gate Rule
-
-如果 gate status 不是 `Approved`，不得進入下一個 mutating 階段。
-
-若下一階段不是 mutating，但依賴缺失證據，仍不得把 `Needs More Evidence` 視為通過。
-
-以下 Gate 必須特別嚴格：
-
-- `SA / DB → Development`：沒有 approved scope、DB impact 或 Version Context，不得進入 Development。
-- `Development → Test`：沒有 Implementation Result，不得進入 Test。
-- `Test → Review`：沒有 Test Report、Dry Run Result 或等效測試證據，不得進入 Review。
-- `Security → Release`：存在 unresolved high-risk issue，不得進入 Release。
-- `Release → UAT`：缺少 rollback plan 或 deployment validation，不得進入 UAT。
+- Gate 不是 `Approved` 時不得進入下一個 mutating stage。
+- Project Context 不足、fingerprint 失效、encoding verification 失敗或 evidence 缺失時使用 `Needs More Evidence` / `Blocked`。
+- `Development → Test` 需要 Implementation Result 與 encoding verification。
+- `Test → Review` 需要 Test Report 或等效有效證據。
+- `Security → Release` 不得存在 unresolved Blocking / High issue。
+- `Release → UAT` 需要 deployment validation 與 rollback plan。
