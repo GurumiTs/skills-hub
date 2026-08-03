@@ -8,148 +8,25 @@ import fs from "fs/promises";
 import fssync from "fs";
 import path from "path";
 import crypto from "crypto";
+import {
+  ALLOWED_ROOTS,
+  ARTIFACT_CONFIG,
+  SKILLS_HUB_ROOT,
+  compileNamePattern,
+  ensureInAllowedRoots,
+  inspectTextFile,
+  readTextFileLimited,
+  resolveArtifactTarget,
+  safeStat,
+  splitLines,
+  toUnixSlashes,
+  walkDirectory,
+  writeTextFileSafe,
+  isProbablyBinary,
+} from "./lib/file-core.js";
+import { inspectProjectContext } from "./lib/project-context.js";
 
-const server = new McpServer({ name: "Local-File-Tools", version: "1.2.0" });
-const IS_WIN = process.platform === "win32";
-const SKILLS_HUB_ROOT = path.resolve(process.cwd());
-
-function toUnixSlashes(value) { return value.replaceAll("\\", "/"); }
-function normForCompare(value) {
-  const resolved = path.resolve(value);
-  return IS_WIN ? resolved.toLowerCase() : resolved;
-}
-function isPathInside(root, target) {
-  const rootNorm = normForCompare(root);
-  const targetNorm = normForCompare(target);
-  return targetNorm === rootNorm || targetNorm.startsWith(rootNorm + path.sep);
-}
-function parseAllowedRoots() {
-  const raw = process.env.FILE_MCP_ROOTS?.trim();
-  const roots = raw ? raw.split(";").map((value) => value.trim()).filter(Boolean) : [process.cwd()];
-  return Array.from(new Set(roots.map((value) => path.resolve(value))));
-}
-const ALLOWED_ROOTS = parseAllowedRoots();
-function ensureInAllowedRoots(targetPath) {
-  const resolved = path.resolve(targetPath);
-  if (ALLOWED_ROOTS.some((root) => isPathInside(root, resolved))) return resolved;
-  throw new Error(`Path not allowed. "${resolved}" is outside allowed roots: ${ALLOWED_ROOTS.join(", ")}`);
-}
-function normalizeSubdir(value, fallback) {
-  const raw = String(value || fallback).trim().replaceAll("\\", "/");
-  if (!raw || raw.startsWith("/") || /^[a-zA-Z]:\//.test(raw)) {
-    throw new Error(`Invalid SDLC artifact subdirectory: ${raw || "(empty)"}`);
-  }
-  const normalized = path.posix.normalize(raw);
-  if (normalized === ".." || normalized.startsWith("../") || normalized.includes("/../")) {
-    throw new Error(`SDLC artifact subdirectory cannot escape its root: ${raw}`);
-  }
-  return normalized.replace(/^\.\//, "");
-}
-function buildArtifactConfig() {
-  const configuredRoot = process.env.SDLC_ARTIFACT_ROOT?.trim() || "docs/_generated";
-  const artifactRoot = path.isAbsolute(configuredRoot)
-    ? path.resolve(configuredRoot)
-    : path.resolve(SKILLS_HUB_ROOT, configuredRoot);
-  const subdirs = {
-    "sa-spec": normalizeSubdir(process.env.SDLC_SA_SPEC_SUBDIR, "sa-specs"),
-    db: normalizeSubdir(process.env.SDLC_DB_SUBDIR, "db"),
-    workflow: normalizeSubdir(process.env.SDLC_WORKFLOW_SUBDIR, "workflows"),
-    "dev-doc": normalizeSubdir(process.env.SDLC_DEV_DOC_SUBDIR, "dev-docs"),
-    requirements: normalizeSubdir(process.env.SDLC_REQUIREMENTS_SUBDIR, "requirements"),
-    flowchart: normalizeSubdir(process.env.SDLC_FLOWCHART_SUBDIR, "flowchart"),
-  };
-  return {
-    artifactRoot,
-    subdirs,
-    categories: Object.fromEntries(
-      Object.entries(subdirs).map(([category, subdir]) => [category, path.resolve(artifactRoot, subdir)])
-    ),
-  };
-}
-const ARTIFACT_CONFIG = buildArtifactConfig();
-function sanitizeArtifactRelativePath(relativePath) {
-  const raw = String(relativePath || "").trim().replaceAll("\\", "/");
-  if (!raw) throw new Error("relative_path is required.");
-  if (raw.startsWith("/") || /^[a-zA-Z]:\//.test(raw)) throw new Error("relative_path must not be absolute.");
-  const normalized = path.posix.normalize(raw).replace(/^\.\//, "");
-  if (normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../")) {
-    throw new Error("relative_path cannot escape the configured artifact directory.");
-  }
-  const parts = normalized.split("/");
-  if (parts.some((part) => !part || part === "." || part === "..")) {
-    throw new Error("relative_path contains an invalid path segment.");
-  }
-  if (parts.some((part) => part.toLowerCase() === ".gemini")) {
-    throw new Error("SDLC artifacts cannot be written into a .gemini directory.");
-  }
-  return normalized;
-}
-async function resolveArtifactTarget(category, relativePath) {
-  const categoryRoot = ARTIFACT_CONFIG.categories[category];
-  if (!categoryRoot) throw new Error(`Unknown SDLC artifact category: ${category}`);
-  const safeRelativePath = sanitizeArtifactRelativePath(relativePath);
-  await fs.mkdir(categoryRoot, { recursive: true });
-  const realCategoryRoot = await fs.realpath(categoryRoot);
-  const target = path.resolve(categoryRoot, safeRelativePath);
-  if (!isPathInside(realCategoryRoot, target)) throw new Error("Artifact target escaped the configured category root.");
-  const parent = path.dirname(target);
-  await fs.mkdir(parent, { recursive: true });
-  const realParent = await fs.realpath(parent);
-  if (!isPathInside(realCategoryRoot, realParent)) {
-    throw new Error("Artifact parent resolves outside the configured category root.");
-  }
-  return { target, safeRelativePath, categoryRoot: realCategoryRoot };
-}
-function isProbablyBinary(buffer) {
-  const sample = buffer.subarray(0, Math.min(buffer.length, 8000));
-  let nulCount = 0;
-  for (const byte of sample) if (byte === 0) nulCount += 1;
-  return nulCount > 0;
-}
-async function safeStat(targetPath) {
-  try { return await fs.stat(targetPath); } catch { return null; }
-}
-function compileNamePattern(globLike) {
-  if (!globLike || typeof globLike !== "string") return null;
-  const escaped = globLike.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-  return new RegExp("^" + escaped.replaceAll("\\*", ".*").replaceAll("\\?", ".") + "$", IS_WIN ? "i" : "");
-}
-function splitLines(text) { return text.split(/\r\n|\n|\r/); }
-async function readTextFileLimited(filePath, encoding, maxBytes) {
-  const allowedPath = ensureInAllowedRoots(filePath);
-  const stat = await fs.stat(allowedPath);
-  if (!stat.isFile()) throw new Error("Target is not a file.");
-  const handle = await fs.open(allowedPath, "r");
-  try {
-    const bytesToRead = Math.min(stat.size, maxBytes);
-    const buffer = Buffer.alloc(bytesToRead);
-    const { bytesRead } = await handle.read(buffer, 0, bytesToRead, 0);
-    const used = buffer.subarray(0, bytesRead);
-    if (isProbablyBinary(used)) throw new Error("File appears to be binary. Use read_file_base64 instead.");
-    return { text: used.toString(encoding), truncated: stat.size > maxBytes, size: stat.size };
-  } finally { await handle.close(); }
-}
-async function walkDirectory(directory, options) {
-  if (options.results.length >= options.maxEntries) return;
-  const entries = await fs.readdir(directory, { withFileTypes: true });
-  for (const entry of entries) {
-    if (options.results.length >= options.maxEntries) break;
-    if (!options.includeHidden && entry.name.startsWith(".")) continue;
-    const fullPath = path.join(directory, entry.name);
-    const stat = await safeStat(fullPath);
-    const item = {
-      path: toUnixSlashes(fullPath),
-      name: entry.name,
-      type: entry.isDirectory() ? "dir" : entry.isFile() ? "file" : entry.isSymbolicLink() ? "symlink" : "other",
-      size: stat?.isFile() ? stat.size : undefined,
-      mtime: stat ? new Date(stat.mtimeMs).toISOString() : undefined,
-    };
-    if (!options.pattern || options.pattern.test(entry.name) || entry.isDirectory()) options.results.push(item);
-    if (options.recursive && entry.isDirectory() && options.depth < options.maxDepth) {
-      await walkDirectory(fullPath, { ...options, depth: options.depth + 1 });
-    }
-  }
-}
+const server = new McpServer({ name: "Local-File-Tools", version: "1.3.0" });
 
 server.tool("get_allowed_roots", {}, async () => ({
   content: [{ type: "text", text: JSON.stringify({
@@ -180,21 +57,60 @@ server.tool(
   async ({ category, relative_path, content }) => {
     try {
       const { target, safeRelativePath, categoryRoot } = await resolveArtifactTarget(category, relative_path);
-      if (fssync.existsSync(target)) {
-        throw new Error("Artifact already exists. Generate a new versioned file name; overwrite is not allowed.");
-      }
-      await fs.writeFile(target, content, { encoding: "utf8", flag: "wx" });
+      if (fssync.existsSync(target)) throw new Error("Artifact already exists. Use a new versioned file name.");
+      const result = await writeTextFileSafe({
+        filePath: target,
+        content,
+        encodingMode: "utf8",
+        lineEndingMode: "lf",
+        overwrite: false,
+        createDirs: true,
+      });
       return { content: [{ type: "text", text: JSON.stringify({
         written: true,
         category,
         relative_path: safeRelativePath,
-        path: toUnixSlashes(target),
         category_root: toUnixSlashes(categoryRoot),
-        encoding: "utf8",
+        encoding: result.after.encoding,
+        line_ending: result.after.line_ending,
         overwrite: false,
+        path: result.path,
       }, null, 2) }] };
     } catch (error) {
       return { content: [{ type: "text", text: `錯誤: SDLC artifact 寫入失敗 - ${error.message}` }] };
+    }
+  }
+);
+
+server.tool(
+  "inspect_text_encoding",
+  {
+    file_path: z.string(),
+    max_bytes: z.number().int().min(100).max(50_000_000).optional().default(10_000_000),
+  },
+  async ({ file_path, max_bytes }) => {
+    try {
+      return { content: [{ type: "text", text: JSON.stringify(await inspectTextFile(file_path, max_bytes), null, 2) }] };
+    } catch (error) {
+      return { content: [{ type: "text", text: `錯誤: 編碼檢查失敗 - ${error.message}` }] };
+    }
+  }
+);
+
+server.tool(
+  "inspect_project_context",
+  {
+    target_root: z.string(),
+    max_depth: z.number().int().min(1).max(8).optional().default(4),
+    max_dependencies: z.number().int().min(1).max(100).optional().default(30),
+    max_encoding_samples: z.number().int().min(1).max(100).optional().default(30),
+  },
+  async ({ target_root, max_depth, max_dependencies, max_encoding_samples }) => {
+    try {
+      const context = await inspectProjectContext(target_root, max_depth, max_dependencies, max_encoding_samples);
+      return { content: [{ type: "text", text: JSON.stringify(context, null, 2) }] };
+    } catch (error) {
+      return { content: [{ type: "text", text: `錯誤: 專案脈絡檢查失敗 - ${error.message}` }] };
     }
   }
 );
@@ -257,14 +173,14 @@ server.tool(
       if (!stat.isFile()) throw new Error("Target is not a file.");
       const handle = await fs.open(allowedPath, "r");
       try {
-        const bytesToRead = Math.min(stat.size, maxBytes);
+        const bytesToRead = Math.min(stat.size, max_bytes);
         const buffer = Buffer.alloc(bytesToRead);
         const { bytesRead } = await handle.read(buffer, 0, bytesToRead, 0);
         return { content: [{ type: "text", text: JSON.stringify({
           file: toUnixSlashes(allowedPath),
           size: stat.size,
           read_bytes: bytesRead,
-          truncated: stat.size > maxBytes,
+          truncated: stat.size > max_bytes,
           base64: buffer.subarray(0, bytesRead).toString("base64"),
         }, null, 2) }] };
       } finally { await handle.close(); }
@@ -275,17 +191,24 @@ server.tool(
 server.tool(
   "write_file",
   {
-    file_path: z.string(), content: z.string(),
-    encoding: z.enum(["utf8", "utf-8", "utf16le", "latin1"]).optional().default("utf8"),
-    overwrite: z.boolean().optional().default(false), create_dirs: z.boolean().optional().default(true),
+    file_path: z.string(),
+    content: z.string(),
+    encoding_mode: z.enum(["preserve", "utf8", "utf8-bom", "utf16le", "latin1"]).optional().default("preserve"),
+    line_ending_mode: z.enum(["preserve", "lf", "crlf"]).optional().default("preserve"),
+    overwrite: z.boolean().optional().default(false),
+    create_dirs: z.boolean().optional().default(true),
   },
-  async ({ file_path, content, encoding, overwrite, create_dirs }) => {
+  async ({ file_path, content, encoding_mode, line_ending_mode, overwrite, create_dirs }) => {
     try {
-      const allowedPath = ensureInAllowedRoots(file_path);
-      if (create_dirs) await fs.mkdir(path.dirname(allowedPath), { recursive: true });
-      if (fssync.existsSync(allowedPath) && !overwrite) throw new Error("File exists. Set overwrite=true to replace it.");
-      await fs.writeFile(allowedPath, content, { encoding: encoding === "utf-8" ? "utf8" : encoding });
-      return { content: [{ type: "text", text: `已寫入: ${toUnixSlashes(allowedPath)}` }] };
+      const result = await writeTextFileSafe({
+        filePath: file_path,
+        content,
+        encodingMode: encoding_mode,
+        lineEndingMode: line_ending_mode,
+        overwrite,
+        createDirs: create_dirs,
+      });
+      return { content: [{ type: "text", text: JSON.stringify({ written: true, ...result }, null, 2) }] };
     } catch (error) { return { content: [{ type: "text", text: `錯誤: 寫入失敗 - ${error.message}` }] }; }
   }
 );
@@ -293,16 +216,24 @@ server.tool(
 server.tool(
   "append_file",
   {
-    file_path: z.string(), content: z.string(),
-    encoding: z.enum(["utf8", "utf-8", "utf16le", "latin1"]).optional().default("utf8"),
+    file_path: z.string(),
+    content: z.string(),
+    encoding_mode: z.enum(["preserve", "utf8", "utf8-bom", "utf16le", "latin1"]).optional().default("preserve"),
+    line_ending_mode: z.enum(["preserve", "lf", "crlf"]).optional().default("preserve"),
     create_dirs: z.boolean().optional().default(true),
   },
-  async ({ file_path, content, encoding, create_dirs }) => {
+  async ({ file_path, content, encoding_mode, line_ending_mode, create_dirs }) => {
     try {
-      const allowedPath = ensureInAllowedRoots(file_path);
-      if (create_dirs) await fs.mkdir(path.dirname(allowedPath), { recursive: true });
-      await fs.appendFile(allowedPath, content, { encoding: encoding === "utf-8" ? "utf8" : encoding });
-      return { content: [{ type: "text", text: `已附加寫入: ${toUnixSlashes(allowedPath)}` }] };
+      const result = await writeTextFileSafe({
+        filePath: file_path,
+        content,
+        encodingMode: encoding_mode,
+        lineEndingMode: line_ending_mode,
+        overwrite: true,
+        createDirs: create_dirs,
+        append: true,
+      });
+      return { content: [{ type: "text", text: JSON.stringify({ appended: true, ...result }, null, 2) }] };
     } catch (error) { return { content: [{ type: "text", text: `錯誤: 附加寫入失敗 - ${error.message}` }] }; }
   }
 );
@@ -477,7 +408,7 @@ server.tool(
       const target = ensureInAllowedRoots(file_path);
       const stat = await fs.stat(target);
       if (!stat.isFile()) throw new Error("Target is not a file.");
-      const bytesToRead = Math.min(stat.size, maxBytes);
+      const bytesToRead = Math.min(stat.size, max_bytes);
       const handle = await fs.open(target, "r");
       try {
         const buffer = Buffer.alloc(bytesToRead);
@@ -485,7 +416,7 @@ server.tool(
         return { content: [{ type: "text", text: JSON.stringify({
           file: toUnixSlashes(target), algorithm,
           hash: crypto.createHash(algorithm).update(buffer.subarray(0, bytesRead)).digest("hex"),
-          size: stat.size, hashed_bytes: bytesRead, truncated: stat.size > maxBytes,
+          size: stat.size, hashed_bytes: bytesRead, truncated: stat.size > max_bytes,
         }, null, 2) }] };
       } finally { await handle.close(); }
     } catch (error) { return { content: [{ type: "text", text: `錯誤: hash 失敗 - ${error.message}` }] }; }
