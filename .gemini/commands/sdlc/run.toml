@@ -1,123 +1,44 @@
-description = "以互動式 Gate 執行完整 SDLC，追蹤實際 Agent invocation，並將非目標專案產物寫入 configured artifact root。"
+description = "依 Workflow State 路由 SDLC 階段與 Gate，避免重複載入完整規則或不必要 Agent。"
 prompt = """
-# /sdlc:run - Interactive SDLC Pipeline
-
-你正在執行 skills-hub workspace 的 `/sdlc:run` command。
+# /sdlc:run - Interactive SDLC Router
 
 使用者需求：
 {{args}}
 
-## Governing Rules
+遵守 `GEMINI.md`。本 command 只負責判斷 Current Stage、Required Agent、Gate 與下一步，不複製各階段完整工作方法。
 
-必須遵守：
+## Routing
 
-- `GEMINI.md`
-- @{docs/playbooks/workflow/sdlc-pipeline.md}
-- @{docs/playbooks/workflow/workflow-state.md}
+- 無 Workflow State：執行 `/sdlc:plan` 等效流程。
+- `SA / DB → Development = Approved`：進入 implementation。
+- `Development → Test = Approved`：進入 test。
+- `Test → Review = Approved`：進入 review。
+- `Security → Release = Approved`：進入 release。
+- Gate 未核准、Blocked 或 Needs More Evidence：停止並回報缺口。
 
-本 command 是互動式 Workflow Orchestrator，不是 unattended auto-coding，也不是 Gemini CLI 官方內建 pipeline engine。
+## Context Economy
 
-所有非目標專案的 SDLC 文件必須透過 `write_sdlc_artifact` 輸出到 configured artifact root。不得將 SA spec、DB proposal、Workflow State 或其他 generated documents 寫入目標專案、使用者 `.gemini` 或 CLI temporary directory。
-
-DB 只能使用 `DB_METADATA_CONNECTIONS` configured aliases 做 read-only metadata lookup。不得從目標專案設定檔、prompt、任意 env name 或 legacy fallback 建立 DB connection。所有 DB mutation 永遠禁止。
-
-## Orchestration Stages
-
-| Stage | Responsible Agent | Skill | Required behavior |
-|---|---|---|---|
-| Requirement Intake | Main Orchestrator | Optional `sa-consultant` | Identify request source and target |
-| SA Analysis | `sa-agent` | `sa-consultant` | Actual subagent invocation |
-| Project / Version Discovery | Main Orchestrator / Developer perspective | `developer-implementer` | Read-only compatibility analysis |
-| DB Impact | `db-agent` | `db-engineering` | Actual subagent invocation when applicable |
-| Implementation Planning | Main Orchestrator / Developer perspective | `developer-implementer` | Proposal only |
-| Development | `developer-agent` | `developer-implementer` | Only after approved Gate |
-| Test | `test-agent` | `test-engineer` | Test Report and evidence |
-| Review | DB / Review / Security Agents | corresponding Skills | Blocking issues stop pipeline |
-| Release / UAT / Handover | `release-agent` plus SA/Test as needed | `release-ops` | Deployment and rollback planning |
-
-不得把 `Perspective Only` 宣稱為 `Actual Subagent`。
-
-## Planning Stage Artifact Contract
-
-新 workflow 的 planning stage 必須：
-
-1. 實際呼叫 `sa-agent`。
-2. 需要 DB analysis 時實際呼叫 `db-agent`。
-3. 呼叫 `get_sdlc_artifact_config`。
-4. 建立 SA tech spec。
-5. 建立 Workflow State。
-6. 有 DB change proposal 且資訊足夠時建立 DB impact、migration proposal、rollback proposal、read-only validation SQL。
-7. 停在 `SA / DB → Development` Gate。
-
-Artifact category 與 naming 規則比照 `/sdlc:plan`。
-
-## Resume Rules
-
-若使用者提供 Workflow State：
-
-1. 讀取 Current Stage、Current Gate、Gate Decisions。
-2. 讀取 Project / Version Context、Playbooks Used、Generated Artifacts 與 Agent Execution Trace。
-3. 只從尚未完成且 Gate 已允許的階段繼續。
-4. Mutating stage 的 Gate status 不是 `Approved` 時不得繼續。
-5. 更新 Workflow State 時建立新的 versioned state artifact，不得覆寫既有 state。
-
-## Target Configuration Isolation
-
-目標專案設定檔只用於 framework、runtime、build、compiler、deployment、encoding、config transform、非敏感常數與 provider type 判斷。
-
-不得輸出或使用 connection string value、server、user ID、password、token、API Key 或其他 secret。
-
-## Gate Rules
-
-每個 Gate 必須輸出：
-
-- Gate Name。
-- Status：Pending / Ready for Approval / Approved / Blocked / Skipped / Needs More Evidence。
-- Evidence。
-- Blocking Issues。
-- Required User Decision。
-
-以下情況必須停止：
-
-- 尚未取得 mutating operation 核准。
-- Requirement、Scope、Acceptance Criteria 或 Target Project 不清楚。
-- Version Context 不足且會影響後續判斷。
-- DB alias 不明確、DB rules 不清楚、rollback 或 validation 不完整。
-- Test Report 缺失或測試失敗。
-- Review / Security 有 blocking or high-risk issue。
-- Release 缺少 rollback plan。
-- Required artifact 建立失敗。
-
-## Agent Execution Trace
-
-每次回覆都必須包含：
-
-| Sequence | Stage | Agent | Invocation Type | Skill | Result | Artifact |
-|---|---|---|---|---|---|---|
-
-`Invocation Type` 只能是：
-
-- `Actual Subagent`
-- `Main Orchestrator`
-- `Perspective Only`
-- `Skipped`
+- 優先讀取 compact Workflow State。
+- Project Context fingerprint 未變時重用 snapshot，不重讀 manifests。
+- 只在目前 Stage 適用時呼叫對應 Agent；DB Agent 僅 DB impact，其他不適用 Agent 標示 `Skipped`。
+- Playbook 只在目前技術證據需要細節時按需讀取，不使用 file content injection 無條件載入完整文件。
+- 更新 Workflow State 時建立 versioned artifact，不覆寫既有 state。
 
 ## Required Output
 
 # SDLC Pipeline Status
 
-## 1. Current Stage
-## 2. Target Project
-## 3. Inputs Used
-## 4. Project / Version Context
-## 5. Playbooks Used
-## 6. Output Produced
-## 7. Generated Artifacts
-## 8. Agent Execution Trace
-## 9. Gate Status
-## 10. Blocking Issues
-## 11. Next Step
-## 12. Workflow State Snapshot
+## Current Stage and Gate
+## Target Project
+## Compact Project Context
+## Output / Generated Artifacts
+## Agent Execution Trace
+| Sequence | Stage | Agent | Invocation Type | Result | Artifact |
+|---|---|---|---|---|---|
 
-當下一步需要一般檔案修改、程式實作、測試執行、部署或外部系統異動時，必須先停下並依 `GEMINI.md` 提出 Change Proposal。
+## Blocking Issues
+## Required User Decision
+## Workflow State Update
+
+任何一般檔案修改、測試 execution、外部系統 mutation 或部署仍需依 `GEMINI.md` 取得核准。
 """
